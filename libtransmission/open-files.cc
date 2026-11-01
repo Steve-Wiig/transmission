@@ -3,7 +3,7 @@
 // or any future license endorsed by Mnemosyne LLC.
 // License text can be found in the licenses/ folder.
 
-#include <algorithm> // std::min
+#include <algorithm> // std::clamp, std::min
 #include <array>
 #include <cstdint> // uint8_t, uint64_t
 #include <span>
@@ -267,6 +267,38 @@ void tr_open_files::close_torrent(tr_torrent_id_t tor_id)
 void tr_open_files::close_file(tr_torrent_id_t tor_id, tr_file_index_t file_num)
 {
     pool_.erase(make_key(tor_id, file_num));
+}
+
+void tr_open_files::set_max_open_files(size_t max_open_files)
+{
+    max_open_files_ = std::clamp(max_open_files, size_t{ 1U }, MaxOpenFiles);
+
+    // if the new limit is smaller than the number of cached files,
+    // close down to the new limit, oldest-used first
+    while (pool_.size() > max_open_files_)
+    {
+        pool_.erase_least_recently_used();
+    }
+}
+
+size_t tr_open_files::max_open_files() const noexcept
+{
+    return max_open_files_;
+}
+
+void tr_open_files::set_cache_ttl(time_t ttl_secs) noexcept
+{
+    pool_.set_ttl(ttl_secs);
+}
+
+time_t tr_open_files::cache_ttl() const noexcept
+{
+    return pool_.ttl();
+}
+
+void tr_open_files::expire_stale_entries(time_t now)
+{
+    pool_.expire_stale_entries(now);
 }
 
 tr_open_files::Val::~Val()
