@@ -11,6 +11,7 @@
 
 #include <cstddef> // for size_t
 #include <cstdint> // for uintX_t
+#include <ctime> // for time_t
 #include <optional>
 #include <string_view>
 #include <utility>
@@ -36,6 +37,23 @@ public:
     void close_all();
     void close_torrent(tr_torrent_id_t tor_id);
     void close_file(tr_torrent_id_t tor_id, tr_file_index_t file_num);
+
+    // Number of files kept open simultaneously.
+    // A smaller pool means more open()/close() calls; on high-latency
+    // filesystems (SMB/NFS/CIFS) those round-trips can stall the IO thread.
+    void set_max_open_files(size_t max_open_files);
+    [[nodiscard]] size_t max_open_files() const noexcept;
+
+    // How long an unused cached fd stays open before being closed.
+    // 0 = never expire (LRU eviction only). Longer TTLs keep fds warm
+    // between infrequent reads/writes on slow shares at the cost of
+    // holding more handles open.
+    void set_cache_ttl(time_t ttl_secs) noexcept;
+    [[nodiscard]] time_t cache_ttl() const noexcept;
+
+    // Drops cached fds that haven't been used within the TTL window.
+    // Call periodically, e.g. from a session timer.
+    void expire_stale_entries(time_t now);
 
 private:
     using Key = std::pair<tr_torrent_id_t, tr_file_index_t>;
