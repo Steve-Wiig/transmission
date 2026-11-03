@@ -1,0 +1,117 @@
+// This file Copyright © Transmission authors and contributors.
+// It may be used under the MIT (SPDX: MIT) license.
+// License text can be found in the licenses/ folder.
+
+#import "PortChecker.h"
+
+static NSTimeInterval const kCheckFireInterval = 3.0;
+
+@interface PortChecker ()
+
+@property(nonatomic, weak) id<PortCheckerDelegate> fDelegate;
+@property(nonatomic) PortStatus fStatus;
+
+@property(nonatomic) NSURLSession* fSession;
+@property(nonatomic) NSURLSessionDataTask* fTask;
+
+@property(nonatomic) NSTimer* fTimer;
+
+@end
+
+@implementation PortChecker
+
+- (instancetype)initForPort:(NSInteger)portNumber delay:(BOOL)delay withDelegate:(id<PortCheckerDelegate>)delegate
+{
+    if ((self = [super init]))
+    {
+        _fSession = [NSURLSession sessionWithConfiguration:NSURLSessionConfiguration.ephemeralSessionConfiguration delegate:nil
+                                             delegateQueue:nil];
+        _fDelegate = delegate;
+
+        _fStatus = PortStatusChecking;
+
+        __weak __auto_type weakSelf = self;
+        _fTimer = [NSTimer scheduledTimerWithTimeInterval:kCheckFireInterval repeats:NO block:^(NSTimer* _Nonnull timer) {
+            [weakSelf startProbe:portNumber];
+        }];
+
+        if (!delay)
+        {
+            [_fTimer fire];
+        }
+    }
+
+    return self;
+}
+
+- (void)dealloc
+{
+    [self cancelProbe];
+}
+
+- (PortStatus)status
+{
+    return self.fStatus;
+}
+
+- (void)cancelProbe
+{
+    [self.fTimer invalidate];
+    self.fTimer = nil;
+
+    [self.fTask cancel];
+}
+
+#pragma mark - Private
+
+- (void)startProbe:(NSInteger)port
+{
+    self.fTimer = nil;
+
+    NSString* urlString = [NSString stringWithFormat:@"https://portcheck.transmissionbt.com/%ld", port];
+    NSURLRequest* portProbeRequest = [NSURLRequest requestWithURL:[NSURL URLWithString:urlString]
+                                                      cachePolicy:NSURLRequestReloadIgnoringLocalAndRemoteCacheData
+                                                  timeoutInterval:15.0];
+
+    _fTask = [_fSession dataTaskWithRequest:portProbeRequest
+                          completionHandler:^(NSData* _Nullable data, NSURLResponse* _Nullable, NSError* _Nullable error) {
+                              if (error)
+                              {
+                                  NSLog(@"Unable to get port status: connection failed (%@)", error.localizedDescription);
+                                  [self callBackWithStatus:PortStatusError];
+                                  return;
+                              }
+                              NSString* probeString = [[NSString alloc] initWithData:data ?: NSData.data encoding:NSUTF8StringEncoding];
+                              if (!probeString)
+                              {
+                                  NSLog(@"Unable to get port status: invalid data received");
+                                  [self callBackWithStatus:PortStatusError];
+                              }
+                              else if ([probeString isEqualToString:@"1"])
+                              {
+                                  [self callBackWithStatus:PortStatusOpen];
+                              }
+                              else if ([probeString isEqualToString:@"0"])
+                              {
+                                  [self callBackWithStatus:PortStatusClosed];
+                              }
+                              else
+                              {
+                                  NSLog(@"Unable to get port status: invalid response (%@)", probeString);
+                                  [self callBackWithStatus:PortStatusError];
+                              }
+                          }];
+    [_fTask resume];
+}
+
+- (void)callBackWithStatus:(PortStatus)status
+{
+    self.fStatus = status;
+
+    __auto_type delegate = self.fDelegate;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [delegate portCheckerDidFinishProbing:self];
+    });
+}
+
+@end

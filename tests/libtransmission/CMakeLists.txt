@@ -1,0 +1,128 @@
+include(GoogleTest)
+
+add_executable(libtransmission-test)
+
+target_sources(libtransmission-test
+    PRIVATE
+        announce-list-test.cc
+        announcer-test.cc
+        announcer-udp-test.cc
+        api-compat-test.cc
+        benc-test.cc
+        bep55-holepunch-test.cc
+        bep55-introducer-store-test.cc
+        bep55-test-utils.h
+        bitfield-test.cc
+        block-info-test.cc
+        blocklist-test.cc
+        buffer-test.cc
+        clients-test.cc
+        completion-test.cc
+        config-dir-lock-test.cc
+        copy-test.cc
+        crypto-test.cc
+        dht-test.cc
+        error-test.cc
+        env-test.cc
+        file-piece-map-test.cc
+        file-utils-test.cc
+        file-test.cc
+        getopt-test.cc
+        handshake-test.cc
+        history-test.cc
+        ip-cache-test.cc
+        json-test.cc
+        local-data-test.cc
+        lpd-test.cc
+        magnet-metainfo-test.cc
+        makemeta-test.cc
+        move-test.cc
+        net-test.cc
+        open-files-test.cc
+        peer-mgr-wishlist-test.cc
+        peer-msgs-test.cc
+        platform-test.cc
+        quark-test.cc
+        remove-test.cc
+        rename-test.cc
+        rpc-test.cc
+        serializer-tests.cc
+        session-alt-speeds-test.cc
+        session-test.cc
+        settings-test.cc
+        strbuf-test.cc
+        string-utils-test.cc
+        subprocess-test-script.cmd
+        subprocess-test.cc
+        test-fixtures.h
+        timer-test.cc
+        torrent-files-test.cc
+        torrent-magnet-test.cc
+        torrent-metainfo-test.cc
+        torrent-queue-test.cc
+        torrent-test.cc
+        torrents-test.cc
+        types-test.cc
+        tr-peer-info-test.cc
+        utils-test.cc
+        values-test.cc
+        variant-test.cc
+        watchdir-test.cc
+        web-test.cc
+        web-utils-test.cc
+        portable-discovery-test.cc)
+
+if(APPLE)
+    target_sources(libtransmission-test
+        PRIVATE
+            utils-apple-test.mm)
+endif()
+
+set_property(
+    TARGET libtransmission-test
+    PROPERTY FOLDER "tests")
+
+target_compile_definitions(libtransmission-test
+    PRIVATE
+        -DLIBTRANSMISSION_TEST_ASSETS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+        __TRANSMISSION__)
+
+target_compile_options(libtransmission-test
+    PRIVATE $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wno-sign-compare>) # patches welcomed
+
+target_link_libraries(libtransmission-test
+    PRIVATE
+        ${TR_NAME}
+        GTest::gtest_main
+        dht::dht
+        transmission::fmt-header-only
+        libevent::core
+        WideInteger::WideInteger)
+
+tr_setup_gtest_target(libtransmission-test "LT.")
+
+add_custom_command(
+    TARGET libtransmission-test
+    PRE_BUILD
+    COMMAND
+        ${CMAKE_COMMAND}
+        -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/subprocess-test-script.cmd
+        $<TARGET_FILE_DIR:libtransmission-test>/subprocess-test.cmd)
+
+add_executable(subprocess-test)
+
+target_sources(subprocess-test
+    PRIVATE
+        subprocess-test-program.cc)
+
+set_property(
+    TARGET subprocess-test
+    PROPERTY FOLDER "tests")
+
+target_link_libraries(subprocess-test
+    PRIVATE
+        ${TR_NAME})
+
+add_dependencies(libtransmission-test
+    subprocess-test)

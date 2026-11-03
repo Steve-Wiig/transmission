@@ -1,0 +1,67 @@
+---
+AlignAfterOpenBracket: AlwaysBreak
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: false
+AlignEscapedNewlines: DontAlign
+AlignOperands: false
+AlignTrailingComments: false
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLambdasOnASingleLine: Inline
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakBeforeMultilineStrings: true
+BinPackArguments: false
+BinPackParameters: false
+BreakBeforeBraces: Allman
+BreakBeforeTernaryOperators: false
+BreakStringLiterals: false
+ColumnLimit: 128
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: false
+DerivePointerAlignment: false
+ExperimentalAutoDetectBinPacking: false
+IndentCaseBlocks: true
+IndentPPDirectives: None
+IndentWidth: 4
+KeepEmptyLines:
+  AtStartOfBlock: false
+MaxEmptyLinesToKeep: 1
+PenaltyBreakAssignment: 1000
+PenaltyBreakBeforeFirstCallParameter: 0
+PenaltyReturnTypeOnItsOwnLine: 1000
+PointerAlignment: Left
+ReflowComments: Never
+SortIncludes: Never
+SpaceAfterCStyleCast: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: Never
+SpacesInParens: Never
+TabWidth: 4
+UseTab: Never
+---
+Language: Cpp
+Standard: c++20
+
+AccessModifierOffset: -4
+PackConstructorInitializers: Never
+BreakAfterReturnType: Automatic
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceList: BeforeComma
+BreakTemplateDeclarations: Yes
+ConstructorInitializerIndentWidth: 4
+FixNamespaceComments: true
+IndentGotoLabels: false
+QualifierAlignment: Right
+SortUsingDeclarations: true # Since clang-format 16, the equivalent value is LexicographicNumeric
+SpaceAfterTemplateKeyword: false
+---
+Language: ObjC
+
+ObjCBlockIndentWidth: 4
+ObjCBreakBeforeNestedBlockParam: false
+ObjCSpaceBeforeProtocolList: false
+PenaltyExcessCharacter: 1
+QualifierAlignment: Right
