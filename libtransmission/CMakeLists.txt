@@ -228,6 +228,9 @@ endif()
 # Generate version.h from version.h.in
 configure_file(version.h.in version.h)
 
+# Generate version.h from version.h.in
+configure_file(version.h.in version.h)
+
 target_sources(${TR_NAME}
     PRIVATE
         announce-list.cc
@@ -421,10 +424,6 @@ else()
     message(STATUS "libnatpmp not found, disabling NAT-PMP port forwarding")
     set(HAVE_NAT_PMP FALSE)
 endif()
-
-target_sources(${TR_NAME}
-    PRIVATE
-        ${CMAKE_CURRENT_BINARY_DIR}/version.h)
 
 # Macro to conditionally add source files based on boolean expressions
 # Usage: tr_allow_compile_if(
