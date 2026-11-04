@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.20)
+﻿cmake_minimum_required(VERSION 3.20)
 
-project(Transmission LANGUAGES C CXX)
+project(Transmission VERSION 4.0.0 LANGUAGES C CXX)
 
 set(TR_NAME ${PROJECT_NAME})
 
@@ -12,6 +12,13 @@ set(ENABLE_QT OFF CACHE BOOL "" FORCE)
 
 # Set MSYS2 MinGW64 root for finding system libraries
 set(MSYS2_MINGW64_ROOT "C:/msys64/mingw64")
+set(TR_THIRD_PARTY_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third-party")
+
+# Crypto backend selection (default to OpenSSL on Windows)
+if(NOT DEFINED CRYPTO_PKG)
+    set(CRYPTO_PKG "openssl" CACHE STRING "Crypto backend: openssl, mbedtls, wolfssl")
+endif()
+set_property(CACHE CRYPTO_PKG PROPERTY STRINGS "openssl;mbedtls;wolfssl")
 
 # Create missing third-party targets before subdirectories
 # These are needed by libtransmission-app and daemon
@@ -19,17 +26,17 @@ set(MSYS2_MINGW64_ROOT "C:/msys64/mingw64")
 # libevent targets
 if(NOT TARGET libevent::core)
     add_library(libevent::core INTERFACE IMPORTED)
-    target_include_directories(libevent::core INTERFACE "${MSYS2_MINGW64_ROOT}/include")
+    target_include_directories(libevent::core INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/libevent/include")
     target_link_libraries(libevent::core INTERFACE "${MSYS2_MINGW64_ROOT}/lib/libevent_core.dll.a")
 endif()
 if(NOT TARGET libevent::extra)
     add_library(libevent::extra INTERFACE IMPORTED)
-    target_include_directories(libevent::extra INTERFACE "${MSYS2_MINGW64_ROOT}/include")
+    target_include_directories(libevent::extra INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/libevent/include")
     target_link_libraries(libevent::extra INTERFACE "${MSYS2_MINGW64_ROOT}/lib/libevent_extra.dll.a")
 endif()
 if(NOT TARGET libevent::openssl)
     add_library(libevent::openssl INTERFACE IMPORTED)
-    target_include_directories(libevent::openssl INTERFACE "${MSYS2_MINGW64_ROOT}/include")
+    target_include_directories(libevent::openssl INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/libevent/include")
     target_link_libraries(libevent::openssl INTERFACE "${MSYS2_MINGW64_ROOT}/lib/libevent_openssl.dll.a")
 endif()
 
@@ -38,73 +45,72 @@ if(NOT TARGET fmt::fmt-header-only)
     add_library(fmt::fmt-header-only INTERFACE IMPORTED)
     target_compile_definitions(fmt::fmt-header-only INTERFACE FMT_HEADER_ONLY=1)
     target_compile_features(fmt::fmt-header-only INTERFACE cxx_std_11)
-    target_include_directories(fmt::fmt-header-only INTERFACE "${MSYS2_MINGW64_ROOT}/include")
+    target_include_directories(fmt::fmt-header-only INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/fmt/include")
+endif()
+
+# transmission::fmt-header-only alias (needed by libtransmission and daemon)
+if(NOT TARGET transmission::fmt-header-only)
+    add_library(transmission::fmt-header-only ALIAS fmt::fmt-header-only)
 endif()
 
 # libdeflate target
 if(NOT TARGET libdeflate::libdeflate)
     add_library(libdeflate::libdeflate INTERFACE IMPORTED)
-    target_include_directories(libdeflate::libdeflate INTERFACE "${MSYS2_MINGW64_ROOT}/include")
+    target_include_directories(libdeflate::libdeflate INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/libdeflate")
     target_link_libraries(libdeflate::libdeflate INTERFACE "${MSYS2_MINGW64_ROOT}/lib/libdeflate.dll.a")
 endif()
 
 # libb64 target
 if(NOT TARGET libb64::libb64)
     add_library(libb64::libb64 INTERFACE IMPORTED)
-    target_include_directories(libb64::libb64 INTERFACE "${MSYS2_MINGW64_ROOT}/include")
+    target_include_directories(libb64::libb64 INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/libb64/include")
     target_link_libraries(libb64::libb64 INTERFACE "${MSYS2_MINGW64_ROOT}/lib/libb64.dll.a")
 endif()
 
 # rapidjson target (header-only)
 if(NOT TARGET RapidJSON)
     add_library(RapidJSON INTERFACE IMPORTED)
-    target_include_directories(RapidJSON INTERFACE "${MSYS2_MINGW64_ROOT}/include")
+    target_include_directories(RapidJSON INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/rapidjson/include")
 endif()
 
 # libpsl target
 if(NOT TARGET psl::psl)
     add_library(psl::psl INTERFACE IMPORTED)
-    target_include_directories(psl::psl INTERFACE "${MSYS2_MINGW64_ROOT}/include")
+    target_include_directories(psl::psl INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/libpsl/include")
     target_link_libraries(psl::psl INTERFACE "${MSYS2_MINGW64_ROOT}/lib/libpsl.dll.a")
 endif()
 
 # miniupnpc target
 if(NOT TARGET miniupnpc::miniupnpc)
     add_library(miniupnpc::miniupnpc INTERFACE IMPORTED)
-    target_include_directories(miniupnpc::miniupnpc INTERFACE "${MSYS2_MINGW64_ROOT}/include")
+    target_include_directories(miniupnpc::miniupnpc INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/miniupnp/miniupnpc/include")
     target_link_libraries(miniupnpc::miniupnpc INTERFACE "${MSYS2_MINGW64_ROOT}/lib/libminiupnpc.dll.a")
 endif()
 
 # libutp target
 if(NOT TARGET libutp::libutp)
     add_library(libutp::libutp INTERFACE IMPORTED)
-    target_include_directories(libutp::libutp INTERFACE "${MSYS2_MINGW64_ROOT}/include")
+    target_include_directories(libutp::libutp INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/libutp/include")
     target_link_libraries(libutp::libutp INTERFACE "${MSYS2_MINGW64_ROOT}/lib/libutp.dll.a")
 endif()
 
 # libnatpmp target (may not exist in MSYS2)
 if(NOT TARGET natpmp::natpmp)
     add_library(natpmp::natpmp INTERFACE IMPORTED)
-    target_include_directories(natpmp::natpmp INTERFACE "${MSYS2_MINGW64_ROOT}/include")
+    # No include directory - libnatpmp not found in MSYS2 and not built from source
     # target_link_libraries(natpmp::natpmp INTERFACE "${MSYS2_MINGW64_ROOT}/lib/libnatpmp.dll.a")
 endif()
 
 # FastFloat target (header-only)
 if(NOT TARGET FastFloat::fast_float)
     add_library(FastFloat::fast_float INTERFACE IMPORTED)
-    target_include_directories(FastFloat::fast_float INTERFACE "${MSYS2_MINGW64_ROOT}/include")
+    target_include_directories(FastFloat::fast_float INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/fast_float/include")
 endif()
 
-# utfcpp target (header-only)
+# utfcpp target (header-only, from third-party submodule)
 if(NOT TARGET utf8::cpp)
     add_library(utf8::cpp INTERFACE IMPORTED)
-    target_include_directories(utf8::cpp INTERFACE "${MSYS2_MINGW64_ROOT}/include")
-endif()
-
-# wildmat target (header-only, third-party)
-if(NOT TARGET wildmat)
-    add_library(wildmat INTERFACE IMPORTED)
-    target_include_directories(wildmat INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/wildmat")
+    target_include_directories(utf8::cpp INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/utfcpp/source")
 endif()
 
 # wide-integer target (header-only, third-party)
@@ -113,22 +119,24 @@ if(NOT TARGET transmission::WideInteger)
     target_include_directories(transmission::WideInteger INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/wide-integer")
 endif()
 
-# mader-crcany target (header-only, third-party)
+# mader-crcany target (third-party, built from source)
+add_subdirectory("${TR_THIRD_PARTY_SOURCE_DIR}/madler-crcany" "${CMAKE_CURRENT_BINARY_DIR}/third-party/madler-crcany" EXCLUDE_FROM_ALL)
 if(NOT TARGET MadlerCrcany)
     add_library(MadlerCrcany INTERFACE IMPORTED)
     target_include_directories(MadlerCrcany INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/madler-crcany")
+    target_link_libraries(MadlerCrcany INTERFACE MadlerCrcany)
 endif()
 
 # sigslot target (header-only, third-party)
 if(NOT TARGET Pal::Sigslot)
     add_library(Pal::Sigslot INTERFACE IMPORTED)
-    target_include_directories(Pal::Sigslot INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/sigslot")
+    target_include_directories(Pal::Sigslot INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/sigslot/include")
 endif()
 
 # small target (header-only, third-party)
 if(NOT TARGET transmission::small)
     add_library(transmission::small INTERFACE IMPORTED)
-    target_include_directories(transmission::small INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/small")
+    target_include_directories(transmission::small INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/small/include")
 endif()
 
 # CURL target (from MSYS2)
@@ -151,12 +159,40 @@ if(NOT TARGET OpenSSL::Crypto)
 endif()
 
 # dht target (third-party, built from source)
+add_subdirectory("${TR_THIRD_PARTY_SOURCE_DIR}/dht" "${CMAKE_CURRENT_BINARY_DIR}/third-party/dht" EXCLUDE_FROM_ALL)
 if(NOT TARGET dht::dht)
     add_library(dht::dht INTERFACE IMPORTED)
     target_include_directories(dht::dht INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/dht")
+    target_link_libraries(dht::dht INTERFACE dht)
+endif()
+
+# wildmat target (third-party, built from source)
+add_subdirectory("${TR_THIRD_PARTY_SOURCE_DIR}/wildmat" "${CMAKE_CURRENT_BINARY_DIR}/third-party/wildmat" EXCLUDE_FROM_ALL)
+# wildmat target is created by the subdirectory as 'wildmat'
+if(NOT TARGET wildmat)
+    add_library(wildmat INTERFACE IMPORTED)
+    target_include_directories(wildmat INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/third-party/wildmat")
+    target_link_libraries(wildmat INTERFACE wildmat)
+endif()
+
+# Network libraries for Windows
+if(WIN32 AND NOT DEFINED TR_NETWORK_LIBRARIES)
+    set(TR_NETWORK_LIBRARIES "ws2_32;iphlpapi")
 endif()
 
 include(TrGTest)
+# === Injected: transmission::crypto_impl target ===
+if(NOT TARGET transmission::crypto_impl)
+    add_library(transmission::crypto_impl INTERFACE IMPORTED)
+    if(CRYPTO_PKG STREQUAL "openssl")
+        target_link_libraries(transmission::crypto_impl INTERFACE OpenSSL::Crypto OpenSSL::SSL)
+    elseif(CRYPTO_PKG STREQUAL "mbedtls")
+        target_link_libraries(transmission::crypto_impl INTERFACE MbedTLS::mbedtls MbedTLS::mbedcrypto)
+    elseif(CRYPTO_PKG STREQUAL "wolfssl")
+        target_link_libraries(transmission::crypto_impl INTERFACE wolfssl::wolfssl)
+    endif()
+endif()
+
 
 add_subdirectory(libtransmission)
 add_subdirectory(libtransmission-app)

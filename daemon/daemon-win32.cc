@@ -230,8 +230,8 @@ bool tr_daemon::spawn(bool foreground, int* exit_code, tr_error& error)
     }
     else
     {
-        SERVICE_TABLE_ENTRY const service_table[] = {
-            { (LPWSTR)service_name, &service_main },
+        SERVICE_TABLE_ENTRYW const service_table[] = {
+            { const_cast<LPWSTR>(service_name), &service_main },
             { nullptr, nullptr },
         };
 

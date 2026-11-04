@@ -1,11 +1,22 @@
-cmake_minimum_required(VERSION 3.20)
+include(CheckAtomic)
+include(CheckLibraryExists)
+include(CheckSymbolExists)
 
-project(Transmission LANGUAGES C CXX)
+if(ENABLE_NLS)
+    find_package(Intl)
+endif()
 
-set(TR_NAME ${PROJECT_NAME})
+check_symbol_exists(SO_REUSEPORT "sys/types.h;sys/socket.h" HAVE_SO_REUSEPORT)
 
-# Generate version.h from version.h.in
-configure_file(version.h.in version.h)
+add_compile_options(
+    $<$<AND:$<BOOL:${APPLE}>,$<OR:$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:Clang>>,$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>>:-fobjc-arc>)
+
+add_library(${TR_NAME} STATIC)
+
+set(IS_APPLE_CLANG FALSE)
+if(APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(IS_APPLE_CLANG TRUE)
+endif()
 
 target_sources(${TR_NAME}
     PRIVATE
@@ -39,11 +50,6 @@ target_sources(${TR_NAME}
         config-dir-lock.cc
         config-dir-lock.h
         constants.h
-        crypto-utils-ccrypto.cc
-        crypto-utils-fallback.cc
-        crypto-utils-mbedtls.cc
-        crypto-utils-openssl.cc
-        crypto-utils-wolfssl.cc
         crypto-utils.cc
         crypto-utils.h
         error-types.h
@@ -53,10 +59,8 @@ target_sources(${TR_NAME}
         env.h
         file-piece-map.cc
         file-piece-map.h
-        file-posix.cc
         file-utils.cc
         file-utils.h
-        file-win32.cc
         file.cc
         file.h
         portable-discovery.cc
@@ -99,6 +103,7 @@ target_sources(${TR_NAME}
         peer-socket.h
         platform.cc
         platform.h
+        port-forwarding-natpmp.h
         port-forwarding-upnp.cc
         port-forwarding-upnp.h
         port-forwarding.cc
@@ -127,8 +132,6 @@ target_sources(${TR_NAME}
         string-utils.cc
         string-utils.h
         $<$<BOOL:${IS_APPLE_CLANG}>:string-utils.mm>
-        subprocess-posix.cc
-        subprocess-win32.cc
         subprocess.h
         timer-ev.cc
         timer-ev.h
@@ -176,9 +179,6 @@ target_sources(${TR_NAME}
         version.h.in
         watchdir-base.h
         watchdir-generic.cc
-        watchdir-inotify.cc
-        watchdir-kqueue.cc
-        watchdir-win32.cc
         watchdir.cc
         watchdir.h
         web-utils.cc
@@ -188,11 +188,15 @@ target_sources(${TR_NAME}
         webseed.cc
         webseed.h)
 
-# Check for libnatpmp (may not exist in MSYS2 mingw64)
+configure_file(version.h.in version.h)
+
+target_sources(${TR_NAME}
+    PRIVATE
+        ${CMAKE_CURRENT_BINARY_DIR}/version.h)
+
 find_path(NATPMP_INCLUDE_DIR natpmp.h
     PATHS "${MSYS2_MINGW64_ROOT}/include"
     NO_DEFAULT_PATH)
-
 if(NATPMP_INCLUDE_DIR)
     message(STATUS "Found libnatpmp: ${NATPMP_INCLUDE_DIR}")
     set(HAVE_NAT_PMP TRUE)
@@ -201,122 +205,144 @@ else()
     set(HAVE_NAT_PMP FALSE)
 endif()
 
-# Macro to conditionally add source files based on boolean expressions
-# Usage: tr_allow_compile_if(
-#   [[CONDITION1]] src1 src2 ...
-#   [[CONDITION2]] src3 ...
-# )
-# Conditions are detected by the [[...]] bracket syntax.
-macro(tr_allow_compile_if)
-    # Collect all arguments
-    set(_args ${ARGN})
-    set(_current_condition "")
-    set(_current_sources "")
-    
-    foreach(_arg IN LISTS _args)
-        # Check if this argument is a condition (wrapped in [[...]])
-        if(_arg MATCHES "^\\[\\[.*\\]\\]$")
-            # If we have a previous condition with sources, process it
-            if(_current_condition AND _current_sources)
-                if(${_current_condition})
-                    target_sources(${TR_NAME} PRIVATE ${_current_sources})
-                endif()
-            endif()
-            # Start new condition - extract the inner condition from [[...]]
-            string(REGEX MATCH "^\\[\\[(.*)\\]\\]$" _match "${_arg}")
-            if(CMAKE_MATCH_1)
-                set(_current_condition "${CMAKE_MATCH_1}")
-            else()
-                message(FATAL_ERROR "tr_allow_compile_if: Failed to parse condition from: ${_arg}")
-            endif()
-            set(_current_sources "")
-        else()
-            # This is a source file for the current condition
-            if(_current_condition)
-                list(APPEND _current_sources "${_arg}")
-            else()
-                message(FATAL_ERROR "tr_allow_compile_if: Source file '${_arg}' appears before any condition")
-            endif()
-        endif()
-    endforeach()
-    
-    # Process the last condition
-    if(_current_condition AND _current_sources)
-        if(${_current_condition})
-            target_sources(${TR_NAME} PRIVATE ${_current_sources})
-        endif()
-    endif()
-endmacro()
+# Conditionally add platform/crypto-specific sources
+target_sources(${TR_NAME} PRIVATE crypto-utils-fallback.cc)
 
-# Macro to conditionally add source files based on boolean expressions
-# Usage: tr_allow_compile_if(
-#   [=[[CONDITION1]]=] src1 src2 ...
-#   [=[[CONDITION2]]=] src3 ...
-# )
-# Conditions are detected by the [=[[...]]=] bracket syntax.
-macro(tr_allow_compile_if)
-    # Collect all arguments
-    set(_args ${ARGN})
-    set(_current_condition "")
-    set(_current_sources "")
-    
-    foreach(_arg IN LISTS _args)
-        # Check if this argument is a condition (wrapped in [=[[...]]=])
-        if(_arg MATCHES "^\\[=\\[\\[.*\\]\\]=\\]$")
-            # If we have a previous condition with sources, process it
-            if(_current_condition AND _current_sources)
-                if(${_current_condition})
-                    target_sources(${TR_NAME} PRIVATE ${_current_sources})
-                endif()
-            endif()
-            # Start new condition - extract the inner condition from [=[[...]]=]
-            string(REGEX MATCH "^\\[=\\[\\[(.*)\\]\\]=\\]$" _match "${_arg}")
-            if(CMAKE_MATCH_1)
-                set(_current_condition "${CMAKE_MATCH_1}")
-            else()
-                message(FATAL_ERROR "tr_allow_compile_if: Failed to parse condition from: ${_arg}")
-            endif()
-            set(_current_sources "")
-        else()
-            # This is a source file for the current condition
-            if(_current_condition)
-                list(APPEND _current_sources "${_arg}")
-            else()
-                message(FATAL_ERROR "tr_allow_compile_if: Source file '${_arg}' appears before any condition")
-            endif()
-        endif()
-    endforeach()
-    
-    # Process the last condition
-    if(_current_condition AND _current_sources)
-        if(${_current_condition})
-            target_sources(${TR_NAME} PRIVATE ${_current_sources})
-        endif()
-    endif()
-endmacro()
+if(CRYPTO_PKG STREQUAL "ccrypto")
+    target_sources(${TR_NAME} PRIVATE crypto-utils-ccrypto.cc)
+elseif(CRYPTO_PKG STREQUAL "mbedtls")
+    target_sources(${TR_NAME} PRIVATE crypto-utils-mbedtls.cc)
+elseif(CRYPTO_PKG STREQUAL "openssl")
+    target_sources(${TR_NAME} PRIVATE crypto-utils-openssl.cc)
+elseif(CRYPTO_PKG STREQUAL "wolfssl")
+    target_sources(${TR_NAME} PRIVATE crypto-utils-wolfssl.cc)
+endif()
 
-tr_allow_compile_if(
-    [=[[TRUE]]=]
-        crypto-utils-fallback.cc
-    [=[[CRYPTO_PKG STREQUAL "ccrypto"]]=]
-        crypto-utils-ccrypto.cc
-    [=[[CRYPTO_PKG STREQUAL "mbedtls"]]=]
-        crypto-utils-mbedtls.cc
-    [=[[CRYPTO_PKG STREQUAL "openssl"]]=]
-        crypto-utils-openssl.cc
-    [=[[CRYPTO_PKG STREQUAL "wolfssl"]]=]
-        crypto-utils-wolfssl.cc
-    [=[[WITH_INOTIFY]]=]
-        watchdir-inotify.cc
-    [=[[WITH_KQUEUE]]=]
-        watchdir-kqueue.cc
-    [=[[WIN32]]=]
-        file-win32.cc
-        subprocess-win32.cc
-        watchdir-win32.cc
-    [=[[NOT WIN32]]=]
-        file-posix.cc
-        subprocess-posix.cc
-    [=[[HAVE_NAT_PMP]]=]
-        port-forwarding-natpmp.cc
-)
+if(WITH_INOTIFY)
+    target_sources(${TR_NAME} PRIVATE watchdir-inotify.cc)
+endif()
+
+if(WITH_KQUEUE)
+    target_sources(${TR_NAME} PRIVATE watchdir-kqueue.cc)
+endif()
+
+if(WIN32)
+    target_sources(${TR_NAME} PRIVATE file-win32.cc subprocess-win32.cc watchdir-win32.cc)
+else()
+    target_sources(${TR_NAME} PRIVATE file-posix.cc subprocess-posix.cc)
+endif()
+
+if(HAVE_NAT_PMP)
+    target_sources(${TR_NAME} PRIVATE port-forwarding-natpmp.cc)
+endif()
+
+target_compile_definitions(${TR_NAME}
+    PRIVATE
+        __TRANSMISSION__
+        WIDE_INTEGER_DISABLE_FLOAT_INTEROP
+        WIDE_INTEGER_DISABLE_IOSTREAM
+        PACKAGE_DATA_DIR="${CMAKE_INSTALL_FULL_DATAROOTDIR}"
+        $<$<BOOL:${WITH_INOTIFY}>:WITH_INOTIFY>
+        $<$<BOOL:${WITH_KQUEUE}>:WITH_KQUEUE>
+        $<$<BOOL:${ENABLE_UTP}>:WITH_UTP>
+        $<$<BOOL:${USE_SYSTEM_B64}>:USE_SYSTEM_B64>
+        $<$<BOOL:${HAVE_SO_REUSEPORT}>:HAVE_SO_REUSEPORT=1>
+    PUBLIC
+        $<$<STREQUAL:${CRYPTO_PKG},ccrypto>:WITH_CCRYPTO>
+        $<$<STREQUAL:${CRYPTO_PKG},mbedtls>:WITH_MBEDTLS>
+        $<$<STREQUAL:${CRYPTO_PKG},openssl>:WITH_OPENSSL>
+        $<$<STREQUAL:${CRYPTO_PKG},wolfssl>:WITH_WOLFSSL>
+        $<$<BOOL:${Intl_FOUND}>:ENABLE_GETTEXT>)
+
+tr_target_compile_definitions_for_functions(${TR_NAME}
+    PRIVATE
+        copyfile
+        copy_file_range
+        fallocate64
+        flock
+        htonll
+        mkdtemp
+        ntohll
+        posix_fadvise
+        posix_fallocate
+        pread
+        pwrite
+        sendfile64)
+
+target_include_directories(${TR_NAME}
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/..
+        ${CMAKE_CURRENT_BINARY_DIR}/..
+        ${Intl_INCLUDE_DIRS})
+
+if(ANDROID)
+    find_library(log-lib log)
+endif()
+
+find_package(Threads REQUIRED)
+
+target_link_libraries(${TR_NAME}
+    PRIVATE
+        Threads::Threads
+        libdeflate::libdeflate
+        CURL::libcurl
+        FastFloat::fast_float
+        psl::psl
+        natpmp::natpmp
+        miniupnpc::miniupnpc
+        dht::dht
+        $<$<BOOL:${ENABLE_UTP}>:libutp::libutp>
+        libb64::libb64
+        ${Intl_LIBRARIES}
+        ${LIBM_LIBRARY}
+        ${LIBQUOTA_LIBRARY}
+        ${TR_NETWORK_LIBRARIES}
+        RapidJSON
+        utf8::cpp
+        wildmat
+        transmission::WideInteger
+        MadlerCrcany
+        $<$<BOOL:${WIN32}>:crypt32>
+        $<$<BOOL:${WIN32}>:shlwapi>
+        "$<$<BOOL:${APPLE}>:-framework Foundation>"
+        $<$<BOOL:${ANDROID}>:${log-lib}>
+        $<$<BOOL:${HAVE_LIBATOMIC}>:atomic>
+    PUBLIC
+        transmission::crypto_impl
+        transmission::fmt-header-only
+        Pal::Sigslot
+        transmission::small
+        libevent::core
+        libevent::extra)
+
+if(INSTALL_LIB)
+    install(
+        TARGETS ${TR_NAME}
+        DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    install(
+        FILES
+            error-types.h
+            error.h
+            file.h
+            log.h
+            makemeta.h
+            quark.h
+            rpcimpl.h
+            session-id.h
+            timer-ev.h
+            timer.h
+            tr-assert.h
+            tr-buffer.h
+            tr-getopt.h
+            tr-macros.h
+            tr-strbuf.h
+            transmission.h
+            utils.h
+            values.h
+            variant.h
+            watchdir.h
+            web-utils.h
+            web.h
+            ${CMAKE_CURRENT_BINARY_DIR}/version.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${TR_NAME})
+endif()

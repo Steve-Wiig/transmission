@@ -20,7 +20,7 @@
 #include <sys/socket.h>
 #endif
 
-#include <dht/dht.h>
+#include "dht.h"
 
 #include "libtransmission/net.h" // tr_port
 #include "libtransmission/types.h"

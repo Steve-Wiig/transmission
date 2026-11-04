@@ -11,7 +11,9 @@
 
 #define LIBTRANSMISSION_PORT_FORWARDING_MODULE
 #include "libtransmission/log.h"
+#ifdef HAVE_NAT_PMP
 #include "libtransmission/port-forwarding-natpmp.h"
+#endif
 #include "libtransmission/port-forwarding-upnp.h"
 #include "libtransmission/port-forwarding.h"
 #include "libtransmission/timer.h"
@@ -88,8 +90,10 @@ private:
         tr_logAddTrace("stopped");
         natPulse(false);
 
+#ifdef HAVE_NAT_PMP
         natpmp_.reset();
         natpmp_state_ = TR_PORT_UNMAPPED;
+#endif
 
         tr_upnpClose(upnp_);
         upnp_ = nullptr;
@@ -118,6 +122,7 @@ private:
             // if we're mapped, everything is fine... check back at `renew_time`
             // to renew the port forwarding if it's expired
             do_port_check_ = true;
+#ifdef HAVE_NAT_PMP
             if (auto const now = tr_time(); natpmp_->renewTime() > now)
             {
                 timer_->start_single_shot(std::chrono::seconds{ natpmp_->renewTime() - now });
@@ -126,6 +131,9 @@ private:
             {
                 timer_->start_single_shot(1min);
             }
+#else
+            timer_->start_single_shot(1min);
+#endif
             break;
 
         case TR_PORT_ERROR:
@@ -177,17 +185,13 @@ private:
     {
         auto const is_enabled = is_enabled_ && !is_shutting_down_;
 
+        auto const old_state = state();
+
+#ifdef HAVE_NAT_PMP
         if (!natpmp_)
         {
             natpmp_ = std::make_unique<tr_natpmp>();
         }
-
-        if (upnp_ == nullptr)
-        {
-            upnp_ = tr_upnpInit();
-        }
-
-        auto const old_state = state();
 
         auto const result = natpmp_->pulse(mediator_.local_peer_port(), is_enabled);
         natpmp_state_ = result.state;
@@ -199,6 +203,12 @@ private:
                     fmt::runtime(_("Mapped private port {private_port} to public port {public_port}")),
                     fmt::arg("private_port", result.local_port.host()),
                     fmt::arg("public_port", result.advertised_port.host())));
+        }
+#endif
+
+        if (upnp_ == nullptr)
+        {
+            upnp_ = tr_upnpInit();
         }
 
         upnp_state_ = tr_upnpPulse(
@@ -229,7 +239,9 @@ private:
     tr_port_forwarding_state upnp_state_ = TR_PORT_UNMAPPED;
 
     tr_upnp* upnp_ = nullptr;
+#ifdef HAVE_NAT_PMP
     std::unique_ptr<tr_natpmp> natpmp_;
+#endif
 
     std::unique_ptr<tr::Timer> timer_;
 };

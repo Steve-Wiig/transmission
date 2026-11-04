@@ -1168,7 +1168,7 @@ bool tr_daemon::init(int argc, char const* const argv[], bool* foreground, int* 
             if (import_result.merged_settings)
             {
                 // Merge with existing settings
-                settings_ = tr_variant::merge_dicts(settings_, *import_result.merged_settings);
+                settings_.merge(*import_result.merged_settings);
             }
         }
     }

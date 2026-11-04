@@ -36,3 +36,11 @@ compile_commands.json
 # CMake user presets
 CMakeUserPresets.json
 .aider*
+build/
+build_log.txt
+*.o
+*.obj
+*.a
+*.exe
+CMakeCache.txt
+CMakeFiles/

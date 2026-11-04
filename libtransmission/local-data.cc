@@ -21,7 +21,7 @@
 #include "libtransmission/torrents.h"
 #include "libtransmission/transmission.h"
 
-namespace tr
+namespace tr {
 namespace
 {
 
