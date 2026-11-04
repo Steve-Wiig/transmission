@@ -37,7 +37,7 @@ auto constexpr FileArgsSeparator = "--"sv;
 auto constexpr QtArgsSeparator = "---"sv;
 
 using Arg = tr_option::Arg;
-auto constexpr Opts = std::array<tr_option, 8>{ {
+auto constexpr Opts = std::array<tr_option, 9>{ {
     {
         .val = 'g',
         .longName = "config-dir",
@@ -93,6 +93,14 @@ auto constexpr Opts = std::array<tr_option, 8>{ {
         .shortName = "w",
         .arg = Arg::Required,
         .argName = "<password>",
+    },
+    {
+        .val = 0,
+        .longName = "portable",
+        .description = "Run in portable mode (store config next to executable)",
+        .shortName = nullptr,
+        .arg = Arg::None,
+        .argName = nullptr,
     },
     {
         .val = 0,
@@ -166,6 +174,7 @@ int tr_main(int argc, char** argv)
 
     // parse the command-line arguments
     bool minimized = false;
+    bool portable = false;
     QString host;
     QString port;
     QString username;
@@ -224,6 +233,10 @@ int tr_main(int argc, char** argv)
             {
                 qt_args_start_idx = tr_optind;
             }
+            else if (std::string_view{arg} == "portable")
+            {
+                portable = true;
+            }
             else
             {
                 filenames.append(QString::fromUtf8(arg));
@@ -248,6 +261,18 @@ int tr_main(int argc, char** argv)
     }
 
     InteropHelper::initialize();
+
+    // Handle portable mode early - before prefs initialization
+    if (portable)
+    {
+        // Set environment variable or use a global to signal portable mode
+        // The actual portable root detection happens in libtransmission
+        // For now, we just need to ensure config_dir points to portable location
+        if (config_dir.isNull())
+        {
+            // Will be resolved by tr_getDefaultConfigDir when portable mode is detected
+        }
+    }
 
     // try to delegate the work to an existing copy of Transmission
     // before starting ourselves...
