@@ -618,24 +618,24 @@ tr_allow_compile_if(
         crypto-utils-fallback.cc
     [[CRYPTO_PKG STREQUAL "ccrypto"]]
         crypto-utils-ccrypto.cc
-    [=[[CRYPTO_PKG STREQUAL "mbedtls"]]=]
+    [[CRYPTO_PKG STREQUAL "mbedtls"]]
         crypto-utils-mbedtls.cc
-    [=[[CRYPTO_PKG STREQUAL "openssl"]]=]
+    [[CRYPTO_PKG STREQUAL "openssl"]]
         crypto-utils-openssl.cc
-    [=[[CRYPTO_PKG STREQUAL "wolfssl"]]=]
+    [[CRYPTO_PKG STREQUAL "wolfssl"]]
         crypto-utils-wolfssl.cc
-    [=[[WITH_INOTIFY]]=]
+    [[WITH_INOTIFY]]
         watchdir-inotify.cc
-    [=[[WITH_KQUEUE]]=]
+    [[WITH_KQUEUE]]
         watchdir-kqueue.cc
-    [=[[WIN32]]=]
+    [[WIN32]]
         file-win32.cc
         subprocess-win32.cc
         watchdir-win32.cc
-    [=[[NOT WIN32]]=]
+    [[NOT WIN32]]
         file-posix.cc
         subprocess-posix.cc
-    [=[[HAVE_NAT_PMP]]=]
+    [[HAVE_NAT_PMP]]
         port-forwarding-natpmp.cc
 )
 
