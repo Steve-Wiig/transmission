@@ -426,6 +426,30 @@ target_sources(${TR_NAME}
     PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR}/version.h)
 
+# Macro to conditionally add source files based on boolean expressions
+macro(tr_allow_compile_if)
+    set(options)
+    set(oneValueArgs)
+    set(multiValueArgs)
+    cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    
+    # Process pairs of condition and source files
+    set(idx 0)
+    while(idx LESS ARG_UNPARSED_ARGUMENTS)
+        list(GET ARG_UNPARSED_ARGUMENTS ${idx} condition)
+        math(EXPR idx "${idx} + 1")
+        if(idx LESS ARG_UNPARSED_ARGUMENTS)
+            list(GET ARG_UNPARSED_ARGUMENTS ${idx} sources)
+            math(EXPR idx "${idx} + 1")
+            
+            # Evaluate the condition
+            if(${condition})
+                target_sources(${TR_NAME} PRIVATE ${sources})
+            endif()
+        endif()
+    endwhile()
+endmacro()
+
 tr_allow_compile_if(
     [=[[TRUE]]=]
         crypto-utils-fallback.cc
