@@ -225,6 +225,9 @@ if(APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(IS_APPLE_CLANG TRUE)
 endif()
 
+# Generate version.h from version.h.in
+configure_file(version.h.in version.h)
+
 target_sources(${TR_NAME}
     PRIVATE
         announce-list.cc
