@@ -236,11 +236,23 @@ add_executable(${TR_NAME}-qt WIN32)
 target_sources(${TR_NAME}-qt
     PRIVATE
         main.cc
+        PortableDiscovery.cc
+        PortableDiscovery.h
         application.qrc)
 
 target_link_libraries(${TR_NAME}-qt
     PRIVATE
         ${TR_NAME}-qt-lib)
+
+if(WIN32)
+    target_link_libraries(${TR_NAME}-qt
+        PRIVATE
+            Mpr
+            Rstrtmgr
+            Advapi32
+            Shell32
+            Ole32)
+endif()
 
 set_target_properties(
     ${TR_NAME}-qt
