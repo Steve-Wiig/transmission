@@ -571,4 +571,5 @@ ImportResult import_from_install(DiscoveredInstall const& install, PortableOptio
     return result;
 }
 
+} // namespace
 } // namespace tr
