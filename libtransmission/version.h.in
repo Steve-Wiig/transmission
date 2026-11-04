@@ -1,5 +1,7 @@
 #pragma once
 
+// This file is processed by CMake's configure_file() to generate version.h
+// Do not edit the generated version.h directly; edit this template instead.
 // NOLINTBEGIN
 
 #define PEERID_PREFIX             "${TR_PEER_ID_PREFIX}"
