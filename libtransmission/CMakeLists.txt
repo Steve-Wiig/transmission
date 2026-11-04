@@ -447,8 +447,9 @@ macro(tr_allow_compile_if)
                     target_sources(${TR_NAME} PRIVATE ${_current_sources})
                 endif()
             endif()
-            # Start new condition
-            set(_current_condition "${_arg}")
+            # Start new condition - extract the inner condition from [=[[...]]=]
+            string(REGEX MATCH "^\\[=\\[\\[(.*)\\]\\]=\\]$" _match "${_arg}")
+            set(_current_condition "${CMAKE_MATCH_1}")
             set(_current_sources "")
         else()
             # This is a source file for the current condition
