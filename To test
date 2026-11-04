@@ -1,0 +1,7 @@
+cd /c/Users/swiig/Documents/transmission-main
+rm -rf build
+cmake -B build -G "MinGW Makefiles" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DTR_NAS_PROFILE=ON \
+  -DENABLE_QT=OFF
+cmake --build build --target Transmission-daemon --parallel 1
