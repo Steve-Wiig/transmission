@@ -66,6 +66,10 @@ target_sources(${TR_NAME}-qt-lib
         OptionsDialog.h
         PathButton.cc
         PathButton.h
+        PortableDiscovery.cc
+        PortableDiscovery.h
+        PortableImporter.cc
+        PortableImporter.h
         Prefs.cc
         Prefs.h
         PrefsDialog.cc
@@ -236,8 +240,6 @@ add_executable(${TR_NAME}-qt WIN32)
 target_sources(${TR_NAME}-qt
     PRIVATE
         main.cc
-        PortableDiscovery.cc
-        PortableDiscovery.h
         application.qrc)
 
 target_link_libraries(${TR_NAME}-qt
