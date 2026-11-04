@@ -172,13 +172,13 @@ endif()
 # sigslot target (header-only, third-party)
 if(NOT TARGET Pal::Sigslot)
     add_library(Pal::Sigslot INTERFACE IMPORTED)
-    target_include_directories(Pal::Sigslot INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/../third-party/sigslot")
+    target_include_directories(Pal::Sigslot INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/../third-party/sigslot/include")
 endif()
 
 # small target (header-only, third-party)
 if(NOT TARGET transmission::small)
     add_library(transmission::small INTERFACE IMPORTED)
-    target_include_directories(transmission::small INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/../third-party/small")
+    target_include_directories(transmission::small INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/../third-party/small/include")
 endif()
 
 # transmission::crypto_impl target (exposes selected crypto backend)
@@ -317,8 +317,6 @@ target_sources(${TR_NAME}
         peer-socket.h
         platform.cc
         platform.h
-        port-forwarding-natpmp.cc
-        port-forwarding-natpmp.h
         port-forwarding-upnp.cc
         port-forwarding-upnp.h
         port-forwarding.cc
@@ -408,7 +406,18 @@ target_sources(${TR_NAME}
         webseed.cc
         webseed.h)
 
-configure_file(version.h.in version.h)
+# Check for libnatpmp (may not exist in MSYS2 mingw64)
+find_path(NATPMP_INCLUDE_DIR natpmp.h
+    PATHS "${MSYS2_MINGW64_ROOT}/include"
+    NO_DEFAULT_PATH)
+
+if(NATPMP_INCLUDE_DIR)
+    message(STATUS "Found libnatpmp: ${NATPMP_INCLUDE_DIR}")
+    set(HAVE_NAT_PMP TRUE)
+else()
+    message(STATUS "libnatpmp not found, disabling NAT-PMP port forwarding")
+    set(HAVE_NAT_PMP FALSE)
+endif()
 
 target_sources(${TR_NAME}
     PRIVATE
@@ -435,7 +444,10 @@ tr_allow_compile_if(
         watchdir-win32.cc
     [=[[NOT WIN32]]=]
         file-posix.cc
-        subprocess-posix.cc)
+        subprocess-posix.cc
+    [=[[HAVE_NAT_PMP]]=]
+        port-forwarding-natpmp.cc
+)
 
 target_compile_definitions(${TR_NAME}
     PRIVATE
@@ -448,6 +460,7 @@ target_compile_definitions(${TR_NAME}
         $<$<BOOL:${ENABLE_UTP}>:WITH_UTP>
         $<$<BOOL:${USE_SYSTEM_B64}>:USE_SYSTEM_B64>
         $<$<BOOL:${HAVE_SO_REUSEPORT}>:HAVE_SO_REUSEPORT=1>
+        $<$<BOOL:${HAVE_NAT_PMP}>:HAVE_NAT_PMP=1>
         # NAS profile: configurable block size and max open files
         $<$<BOOL:${TR_NAS_PROFILE}>:TR_BLOCK_SIZE=65536>
         $<$<BOOL:${TR_NAS_PROFILE}>:TR_MAX_OPEN_FILES=512>
@@ -492,7 +505,7 @@ target_link_libraries(${TR_NAME}
         CURL::libcurl
         FastFloat::fast_float
         psl::psl
-        natpmp::natpmp
+        $<$<BOOL:${HAVE_NAT_PMP}>:natpmp::natpmp>
         miniupnpc::miniupnpc
         dht::dht
         $<$<BOOL:${ENABLE_UTP}>:libutp::libutp>
