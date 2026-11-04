@@ -438,16 +438,16 @@ macro(tr_allow_compile_if)
     set(_current_sources "")
     
     foreach(_arg IN LISTS _args)
-        # Check if this argument is a condition (wrapped in [=[[...]]=])
-        if(_arg MATCHES "^\\[=\\[\\[.*\\]\\]=\\]$")
+        # Check if this argument is a condition (wrapped in [[...]])
+        if(_arg MATCHES "^\\[\\[.*\\]\\]$")
             # If we have a previous condition with sources, process it
             if(_current_condition AND _current_sources)
                 if(${_current_condition})
                     target_sources(${TR_NAME} PRIVATE ${_current_sources})
                 endif()
             endif()
-            # Start new condition - extract the inner condition from [=[[...]]=]
-            string(REGEX MATCH "^\\[=\\[\\[(.*)\\]\\]=\\]$" _match "${_arg}")
+            # Start new condition - extract the inner condition from [[...]]
+            string(REGEX MATCH "^\\[\\[(.*)\\]\\]$" _match "${_arg}")
             if(CMAKE_MATCH_1)
                 set(_current_condition "${CMAKE_MATCH_1}")
             else()
@@ -567,9 +567,9 @@ macro(tr_allow_compile_if)
 endmacro()
 
 tr_allow_compile_if(
-    [=[[TRUE]]=]
+    [[TRUE]]
         crypto-utils-fallback.cc
-    [=[[CRYPTO_PKG STREQUAL "ccrypto"]]=]
+    [[CRYPTO_PKG STREQUAL "ccrypto"]]
         crypto-utils-ccrypto.cc
     [=[[CRYPTO_PKG STREQUAL "mbedtls"]]=]
         crypto-utils-mbedtls.cc
