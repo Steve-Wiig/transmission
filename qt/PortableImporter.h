@@ -9,12 +9,12 @@
 #include <vector>
 #include <optional>
 
+#include "PortableDiscovery.h"
+
 namespace tr
 {
 namespace portable
 {
-
-struct HostInstall;
 
 struct FileLockInfo
 {

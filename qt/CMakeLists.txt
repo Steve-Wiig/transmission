@@ -125,7 +125,8 @@ tr_allow_compile_if(
     [=[[ENABLE_QT_COM_INTEROP]]=]
         ComInteropHelper.cc
     [=[[ENABLE_QT_DBUS_INTEROP]]=]
-        DBusInteropHelper.cc)
+        DBusInteropHelper.cc
+)
 
 target_sources(${TR_NAME}-qt-lib
     PRIVATE
