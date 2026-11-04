@@ -427,27 +427,41 @@ target_sources(${TR_NAME}
         ${CMAKE_CURRENT_BINARY_DIR}/version.h)
 
 # Macro to conditionally add source files based on boolean expressions
+# Usage: tr_allow_compile_if(
+#   [=[[CONDITION1]]=] src1 src2 ...
+#   [=[[CONDITION2]]=] src3 ...
+# )
+# Conditions are detected by the [=[[...]]=] bracket syntax.
 macro(tr_allow_compile_if)
-    set(options)
-    set(oneValueArgs)
-    set(multiValueArgs)
-    cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    # Collect all arguments
+    set(_args ${ARGN})
+    set(_current_condition "")
+    set(_current_sources "")
     
-    # Process pairs of condition and source files
-    set(idx 0)
-    while(idx LESS ARG_UNPARSED_ARGUMENTS)
-        list(GET ARG_UNPARSED_ARGUMENTS ${idx} condition)
-        math(EXPR idx "${idx} + 1")
-        if(idx LESS ARG_UNPARSED_ARGUMENTS)
-            list(GET ARG_UNPARSED_ARGUMENTS ${idx} sources)
-            math(EXPR idx "${idx} + 1")
-            
-            # Evaluate the condition
-            if(${condition})
-                target_sources(${TR_NAME} PRIVATE ${sources})
+    foreach(_arg IN LISTS _args)
+        # Check if this argument is a condition (wrapped in [=[[...]]=])
+        if(_arg MATCHES "^\\[=\\[\\[.*\\]\\]=\\]$")
+            # If we have a previous condition with sources, process it
+            if(_current_condition AND _current_sources)
+                if(${_current_condition})
+                    target_sources(${TR_NAME} PRIVATE ${_current_sources})
+                endif()
             endif()
+            # Start new condition
+            set(_current_condition "${_arg}")
+            set(_current_sources "")
+        else()
+            # This is a source file for the current condition
+            list(APPEND _current_sources "${_arg}")
         endif()
-    endwhile()
+    endforeach()
+    
+    # Process the last condition
+    if(_current_condition AND _current_sources)
+        if(${_current_condition})
+            target_sources(${TR_NAME} PRIVATE ${_current_sources})
+        endif()
+    endif()
 endmacro()
 
 tr_allow_compile_if(
