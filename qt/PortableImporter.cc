@@ -9,10 +9,13 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #include <restartmanager.h>
 #include <shlobj.h>
+#include <psapi.h>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -84,7 +87,7 @@ std::string get_known_folder_path(REFKNOWNFOLDERID rfid)
 std::string normalize_path(std::string const& path)
 {
     std::string result = path;
-    std::replace(result.begin(), result.end(), '\\', '/');
+    std::replace(result.begin(), result.end(), '/', '/');
     return result;
 }
 
@@ -103,11 +106,11 @@ std::string drive_to_unc(std::string const& path)
 
     // WNetGetUniversalNameW requires the path to be a root directory
     std::wstring root_path = wpath;
-    auto pos = root_path.find_first_of(L"\\/");
+    auto pos = root_path.find_first_of(L"\/");
     if (pos != std::wstring::npos)
         root_path = root_path.substr(0, pos + 1);
     else
-        root_path += L"\\";
+        root_path += L"\";
 
     DWORD result = WNetGetUniversalNameW(root_path.c_str(), UNIVERSAL_NAME_INFO_LEVEL, unc_path, &unc_size);
     if (result == NO_ERROR)
@@ -119,7 +122,7 @@ std::string drive_to_unc(std::string const& path)
         if (pos != std::wstring::npos)
         {
             std::string rel = wide_to_utf8(wpath.substr(pos + 1));
-            std::replace(rel.begin(), rel.end(), '\\', '/');
+            std::replace(rel.begin(), rel.end(), '/', '/');
             unc += "/";
             unc += rel;
         }
@@ -213,15 +216,24 @@ std::vector<FileLockInfo> checkFileLocks(std::string const& config_dir)
         return locked_files;
     }
 
-    auto session_guard = std::unique_ptr<void, void(*)(DWORD*)>(&session_handle, [](DWORD* h) { RmEndSession(*h); });
+    // RAII guard for Restart Manager session
+    struct RmSessionGuard {
+        DWORD handle = 0;
+        ~RmSessionGuard() { if (handle) RmEndSession(handle); }
+    } session_guard{session_handle};
 
     // Register resources
-    std::vector<RM_UNIQUE_PROCESS> rgApplications;
     UINT nApplications = 0;
 
+    // Convert vector<wstring> to array of const WCHAR*
+    std::vector<const WCHAR*> resource_ptrs;
+    resource_ptrs.reserve(resources.size());
+    for (auto const& r : resources)
+        resource_ptrs.push_back(r.c_str());
+
     result = RmRegisterResources(session_handle,
-                                 static_cast<UINT>(resources.size()),
-                                 resources.data(),
+                                 static_cast<UINT>(resource_ptrs.size()),
+                                 resource_ptrs.data(),
                                  0, nullptr,
                                  0, nullptr);
     if (result != ERROR_SUCCESS)
@@ -230,17 +242,20 @@ std::vector<FileLockInfo> checkFileLocks(std::string const& config_dir)
     }
 
     // Get the list of processes locking the resources
-    result = RmGetList(session_handle, &nApplications, nullptr, nullptr, nullptr, nullptr);
+    UINT nProcInfoNeeded = 0;
+    std::vector<RM_PROCESS_INFO> rgProcessInfo;
+    DWORD reboot_reasons = 0;
+    result = RmGetList(session_handle, &nProcInfoNeeded, &nApplications, nullptr, &reboot_reasons);
     if (result == ERROR_MORE_DATA && nApplications > 0)
     {
-        rgApplications.resize(nApplications);
-        UINT nProcInfoNeeded = 0;
-        result = RmGetList(session_handle, &nApplications, rgApplications.data(), &nProcInfoNeeded, nullptr, nullptr);
+        rgProcessInfo.resize(nApplications);
+        result = RmGetList(session_handle, &nProcInfoNeeded, &nApplications, rgProcessInfo.data(), &reboot_reasons);
         if (result == ERROR_SUCCESS)
         {
             for (UINT i = 0; i < nApplications; ++i)
             {
-                RM_UNIQUE_PROCESS const& proc = rgApplications[i];
+                RM_PROCESS_INFO const& proc_info = rgProcessInfo[i];
+                RM_UNIQUE_PROCESS const& proc = proc_info.Process;
 
                 // Get process name
                 HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, proc.dwProcessId);
