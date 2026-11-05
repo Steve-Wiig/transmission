@@ -22,6 +22,9 @@
 
 #include "Application.h"
 #include "InteropHelper.h"
+#include "PortableDiscovery.h"
+#include "PortableImporter.h"
+#include "PortableRemap.h"
 #include "Prefs.h"
 #include "RpcClient.h"
 #include "VariantHelpers.h"
@@ -95,10 +98,10 @@ auto constexpr Opts = std::array<tr_option, 9>{ {
         .argName = "<password>",
     },
     {
-        .val = 0,
+        .val = 'P',
         .longName = "portable",
         .description = "Run in portable mode (store config next to executable)",
-        .shortName = nullptr,
+        .shortName = "P",
         .arg = Arg::None,
         .argName = nullptr,
     },
@@ -181,6 +184,7 @@ int tr_main(int argc, char** argv)
     QString password;
     QString config_dir;
     QStringList filenames;
+    QString portable_config_dir;
 
     int opt = 0;
     char const* arg = nullptr;
@@ -209,6 +213,10 @@ int tr_main(int argc, char** argv)
 
         case 'w':
             password = QString::fromUtf8(arg);
+            break;
+
+        case 'P':
+            portable = true;
             break;
 
         case 'm':
@@ -260,25 +268,69 @@ int tr_main(int argc, char** argv)
         }
     }
 
-    InteropHelper::initialize();
-
     // Handle portable mode early - before prefs initialization
     if (portable)
     {
-        // Set environment variable or use a global to signal portable mode
-        // The actual portable root detection happens in libtransmission
-        // For now, we just need to ensure config_dir points to portable location
-        if (config_dir.isNull())
+        // Compute portable config dir: <exe_dir>/data
+        portable_config_dir = QCoreApplication::applicationDirPath() + QStringLiteral("/data");
+        QDir dir(portable_config_dir);
+        if (!dir.exists())
         {
-            // Will be resolved by tr_getDefaultConfigDir when portable mode is detected
+            dir.mkpath(portable_config_dir);
+        }
+
+        // Override config_dir with portable path
+        config_dir = portable_config_dir;
+
+        // Belt-and-braces: set TRANSMISSION_HOME for any library calls
+        qputenv("TRANSMISSION_HOME", portable_config_dir.toUtf8());
+
+        // First-run import: if no settings.json exists, discover host installs and import
+        QString portable_settings = portable_config_dir + QStringLiteral("/settings.json");
+        QFileInfo settings_info(portable_settings);
+        if (!settings_info.exists())
+        {
+            // Discover host Transmission installations
+            auto host_installs = tr::portable::discoverHostInstalls();
+            if (!host_installs.empty())
+            {
+                // Use the first (most recent/likely) host install
+                auto const& host_install = host_installs.front();
+
+                // Stage import from host to portable directory
+                tr::portable::ImportOptions options;
+                options.import_settings = true;
+                options.import_resume = true;
+                options.import_torrent_files = true;
+                options.remap_drive_to_unc = true;
+                options.fail_fast = false;
+
+                // portable_root is the exe directory (parent of data/)
+                QString portable_root = QCoreApplication::applicationDirPath();
+                auto result = tr::portable::stageImport(host_install, portable_root.toUtf8().constData(), options);
+
+                // If import succeeded, remap paths in settings and resume files
+                if (result.success)
+                {
+                    tr::portable::migrateSettings(portable_settings);
+                    tr::portable::migrateResumeFiles(portable_config_dir + QStringLiteral("/resume"));
+                }
+            }
         }
     }
 
-    // try to delegate the work to an existing copy of Transmission
-    // before starting ourselves...
-    if (tryDelegate(filenames))
+    // In portable mode, disable COM interop initialization and delegation
+    // to avoid handing off to the installed host instance
+    if (!portable)
     {
-        return 0;
+        InteropHelper::initialize();
+
+        // try to delegate the work to an existing copy of Transmission
+        // before starting ourselves...
+        if (tryDelegate(filenames))
+        {
+            return 0;
+        }
     }
 
     // set the fallback config dir
@@ -336,7 +388,7 @@ int tr_main(int argc, char** argv)
     auto qt_argc = static_cast<int>(std::size(qt_argv));
     auto nam = QNetworkAccessManager{};
     auto rpc = RpcClient{ nam };
-    auto const app = Application{ prefs, rpc, minimized, config_dir, filenames, qt_argc, std::data(qt_argv) };
+    auto const app = Application{ prefs, rpc, minimized, config_dir, filenames, qt_argc, std::data(qt_argv), portable };
     auto const ret = QApplication::exec();
 
     // save prefs before exiting
