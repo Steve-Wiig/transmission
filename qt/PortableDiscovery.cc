@@ -5,6 +5,8 @@
 
 #include "PortableDiscovery.h"
 
+#include "PortableImporter.h"
+
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
@@ -40,13 +42,7 @@ std::string wide_to_utf8(std::wstring_view wstr)
     return result;
 }
 
-bool dir_exists(std::string_view path)
-{
-    std::wstring wpath;
-    wpath.assign(path.begin(), path.end());
-    DWORD attrs = GetFileAttributesW(wpath.c_str());
-    return attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY);
-}
+// dir_exists and file_exists are now in PortableImporter.cc
 
 std::string get_known_folder_path(REFKNOWNFOLDERID rfid)
 {

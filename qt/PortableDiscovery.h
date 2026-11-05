@@ -23,5 +23,9 @@ struct HostInstall
 
 std::vector<HostInstall> discoverHostInstalls();
 
+// Utility functions for path checking
+bool dir_exists(std::string_view path);
+bool file_exists(std::string_view path);
+
 } // namespace portable
 } // namespace tr

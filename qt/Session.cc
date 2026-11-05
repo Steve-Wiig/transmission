@@ -38,6 +38,7 @@
 #include "AddData.h"
 #include "Filters.h"
 #include "PortableDiscovery.h"
+#include "PortableImporter.h"
 #include "Prefs.h"
 #include "QtCompat.h"
 #include "RpcQueue.h"
