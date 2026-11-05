@@ -308,6 +308,11 @@ void Session::restart()
 
 void Session::start()
 {
+    std::cout << "[Session] Starting session..." << std::endl;
+    std::cout << "[Session]   Config dir: " << config_dir_.toStdString() << std::endl;
+    std::cout << "[Session]   Portable mode: " << (portable_ ? "yes" : "no") << std::endl;
+    std::cout << "[Session]   Remote session: " << (prefs_.get<bool>(TR_KEY_remote_session_enabled) ? "yes" : "no") << std::endl;
+
     if (prefs_.get<bool>(TR_KEY_remote_session_enabled))
     {
         QUrl url;
@@ -334,6 +339,7 @@ void Session::start()
         }
 
         rpc_.start(url);
+        std::cout << "[Session] Connected to remote session at " << url.toString().toStdString() << std::endl;
     }
     else
     {
@@ -345,6 +351,7 @@ void Session::start()
         // Portable mode: isolate from installed host instance
         if (portable_)
         {
+            std::cout << "[Session] Applying portable mode settings..." << std::endl;
             // Use C++ variant API to mutate the settings map
             if (auto* map = settings.get_if<tr_variant::Map>(); map != nullptr)
             {
@@ -355,16 +362,20 @@ void Session::start()
             }
         }
 
+        std::cout << "[Session] Initializing libtransmission session..." << std::endl;
         session_ = tr_sessionInit(config_dir, true, settings);
 
         rpc_.start(session_);
 
         auto* const ctor = tr_ctorNew(session_);
-        tr_sessionLoadTorrents(session_, ctor);
+        size_t n_torrents = tr_sessionLoadTorrents(session_, ctor);
         tr_ctorFree(ctor);
+        
+        std::cout << "[Session] Loaded " << n_torrents << " torrent(s)" << std::endl;
     }
 
     emit sourceChanged();
+    std::cout << "[Session] Session started successfully" << std::endl;
 }
 
 // ---

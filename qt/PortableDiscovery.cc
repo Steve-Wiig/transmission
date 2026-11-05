@@ -213,11 +213,55 @@ std::vector<HostInstall> discoverHostInstalls()
         installs,
         "official");
 
-    // Helper to validate Transmission config directory
+    // Helper to validate Transmission config directory - checks for non-empty dirs
     auto is_valid_transmission_config = [](std::string_view path) -> bool {
-        return dir_exists(std::string(path) + "\\resume") || 
-               dir_exists(std::string(path) + "\\torrents") || 
-               file_exists(std::string(path) + "\\settings.json");
+        std::string resume_dir = std::string(path) + "\\resume";
+        std::string torrents_dir = std::string(path) + "\\torrents";
+        std::string settings_file = std::string(path) + "\\settings.json";
+        
+        // Must have settings.json AND at least one non-empty data directory
+        if (!file_exists(settings_file))
+            return false;
+            
+        if (dir_exists(resume_dir)) {
+            // Check if resume dir has any .resume files
+            for (auto const& entry : std::filesystem::directory_iterator(resume_dir)) {
+                if (entry.is_regular_file() && entry.path().extension() == ".resume") {
+                    return true;
+                }
+            }
+        }
+        
+        if (dir_exists(torrents_dir)) {
+            // Check if torrents dir has any .torrent or .magnet files
+            for (auto const& entry : std::filesystem::directory_iterator(torrents_dir)) {
+                if (entry.is_regular_file() && 
+                    (entry.path().extension() == ".torrent" || entry.path().extension() == ".magnet")) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    };
+
+    auto add_install_if_valid = [&installs, &is_valid_transmission_config](std::string const& config_dir, std::string const& type) {
+        if (dir_exists(config_dir) && is_valid_transmission_config(config_dir)) {
+            // Check if we already have this config_dir
+            bool found = false;
+            for (auto const& inst : installs) {
+                if (inst.config_dir == config_dir) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                HostInstall install;
+                install.type = type;
+                install.config_dir = config_dir;
+                installs.push_back(std::move(install));
+            }
+        }
     };
 
     // 4. Known Folder fallback: %LOCALAPPDATA%\transmission
@@ -225,26 +269,7 @@ std::vector<HostInstall> discoverHostInstalls()
     if (!local_appdata.empty())
     {
         std::string config_dir = local_appdata + "\\transmission";
-        if (dir_exists(config_dir) && is_valid_transmission_config(config_dir))
-        {
-            // Check if we already have this config_dir
-            bool found = false;
-            for (auto const& inst : installs)
-            {
-                if (inst.config_dir == config_dir)
-                {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found)
-            {
-                HostInstall install;
-                install.type = "official";
-                install.config_dir = config_dir;
-                installs.push_back(std::move(install));
-            }
-        }
+        add_install_if_valid(config_dir, "official");
     }
 
     // 5. Known Folder fallback: %APPDATA%\transmission (Roaming)
@@ -252,26 +277,7 @@ std::vector<HostInstall> discoverHostInstalls()
     if (!roaming_appdata.empty())
     {
         std::string config_dir = roaming_appdata + "\\transmission";
-        if (dir_exists(config_dir) && is_valid_transmission_config(config_dir))
-        {
-            // Check if we already have this config_dir
-            bool found = false;
-            for (auto const& inst : installs)
-            {
-                if (inst.config_dir == config_dir)
-                {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found)
-            {
-                HostInstall install;
-                install.type = "official";
-                install.config_dir = config_dir;
-                installs.push_back(std::move(install));
-            }
-        }
+        add_install_if_valid(config_dir, "official");
     }
 
     // 6. Microsoft Store installation
@@ -295,13 +301,7 @@ std::vector<HostInstall> discoverHostInstalls()
                 if (dir_exists(local_state))
                 {
                     std::string config_dir = local_state + "\\config";
-                    // Validate that config_dir actually contains Transmission data
-                    auto is_valid_transmission_config = [](std::string_view path) -> bool {
-                        return dir_exists(std::string(path) + "\\resume") || 
-                               dir_exists(std::string(path) + "\\torrents") || 
-                               file_exists(std::string(path) + "\\settings.json");
-                    };
-
+                    // Use the shared validation lambda
                     bool found = false;
                     for (auto const& inst : installs)
                     {

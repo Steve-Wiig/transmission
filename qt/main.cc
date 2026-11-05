@@ -271,12 +271,15 @@ int tr_main(int argc, char** argv)
     // Handle portable mode early - before prefs initialization
     if (portable)
     {
+        std::cout << "[PortableMode] Portable mode enabled" << std::endl;
+        
         // Compute portable config dir: <exe_dir>/data
         portable_config_dir = QCoreApplication::applicationDirPath() + QStringLiteral("/data");
         QDir dir(portable_config_dir);
         if (!dir.exists())
         {
             dir.mkpath(portable_config_dir);
+            std::cout << "[PortableMode] Created portable config directory: " << portable_config_dir.toStdString() << std::endl;
         }
 
         // Override config_dir with portable path
@@ -290,16 +293,22 @@ int tr_main(int argc, char** argv)
         QFileInfo settings_info(portable_settings);
         if (!settings_info.exists())
         {
+            std::cout << "[PortableMode] First run detected - discovering host installations..." << std::endl;
+            
             // Discover host Transmission installations
             auto host_installs = tr::portable::discoverHostInstalls();
+            std::cout << "[PortableMode] Found " << host_installs.size() << " host installation(s)" << std::endl;
         
             // Try each host install until one succeeds
             for (auto const& host_install : host_installs)
             {
+                std::cout << "[PortableMode] Trying host install: " << host_install.config_dir << " (type: " << host_install.type << ")" << std::endl;
+                
                 // Skip installs without a valid config directory
                 if (host_install.config_dir.empty() || 
                     !tr::portable::dir_exists(host_install.config_dir))
                 {
+                    std::cout << "[PortableMode]   Skipping - invalid config directory" << std::endl;
                     continue;
                 }
 
@@ -318,11 +327,24 @@ int tr_main(int argc, char** argv)
                 // If import succeeded, remap paths in settings and resume files
                 if (result.success)
                 {
+                    std::cout << "[PortableMode] Import succeeded, remapping paths..." << std::endl;
                     tr::portable::migrateSettings(portable_settings);
                     tr::portable::migrateResumeFiles(portable_config_dir + QStringLiteral("/resume"));
+                    std::cout << "[PortableMode] Portable setup complete!" << std::endl;
                     break; // Stop after first successful import
                 }
+                else
+                {
+                    std::cout << "[PortableMode] Import failed: " << result.errors.size() << " error(s)" << std::endl;
+                    for (auto const& err : result.errors) {
+                        std::cout << "[PortableMode]   Error: " << err << std::endl;
+                    }
+                }
             }
+        }
+        else
+        {
+            std::cout << "[PortableMode] Existing portable config found, skipping import" << std::endl;
         }
     }
 

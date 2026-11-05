@@ -72,12 +72,37 @@ bool file_exists(std::string_view path)
     return attrs != INVALID_FILE_ATTRIBUTES && !(attrs & FILE_ATTRIBUTE_DIRECTORY);
 }
 
-// Helper to validate a Transmission config directory
+// Helper to validate a Transmission config directory - checks for non-empty dirs
 bool is_valid_transmission_config(std::string_view path)
 {
-    return dir_exists(std::string(path) + "\\resume") || 
-           dir_exists(std::string(path) + "\\torrents") || 
-           file_exists(std::string(path) + "\\settings.json");
+    std::string resume_dir = std::string(path) + "\\resume";
+    std::string torrents_dir = std::string(path) + "\\torrents";
+    std::string settings_file = std::string(path) + "\\settings.json";
+    
+    // Must have settings.json AND at least one non-empty data directory
+    if (!file_exists(settings_file))
+        return false;
+        
+    if (dir_exists(resume_dir)) {
+        // Check if resume dir has any .resume files
+        for (auto const& entry : std::filesystem::directory_iterator(resume_dir)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".resume") {
+                return true;
+            }
+        }
+    }
+    
+    if (dir_exists(torrents_dir)) {
+        // Check if torrents dir has any .torrent or .magnet files
+        for (auto const& entry : std::filesystem::directory_iterator(torrents_dir)) {
+            if (entry.is_regular_file() && 
+                (entry.path().extension() == ".torrent" || entry.path().extension() == ".magnet")) {
+                return true;
+            }
+        }
+    }
+    
+    return false;
 }
 
 std::string get_known_folder_path(REFKNOWNFOLDERID rfid)
@@ -278,10 +303,17 @@ ImportResult stageImport(HostInstall const& host_install, std::string const& por
 {
     ImportResult result;
 
+    std::cout << "[PortableImport] Starting import from host install:" << std::endl;
+    std::cout << "[PortableImport]   Type: " << host_install.type << std::endl;
+    std::cout << "[PortableImport]   Config dir: " << host_install.config_dir << std::endl;
+    std::cout << "[PortableImport]   Install dir: " << host_install.install_dir << std::endl;
+    std::cout << "[PortableImport]   Portable root: " << portable_root << std::endl;
+
     if (host_install.config_dir.empty())
     {
         result.errors.push_back("Host install has no config directory");
         result.success = false;
+        std::cout << "[PortableImport] ERROR: Host install has no config directory" << std::endl;
         return result;
     }
 
@@ -289,8 +321,20 @@ ImportResult stageImport(HostInstall const& host_install, std::string const& por
     {
         result.errors.push_back("Host config directory does not exist: " + host_install.config_dir);
         result.success = false;
+        std::cout << "[PortableImport] ERROR: Config directory does not exist: " << host_install.config_dir << std::endl;
         return result;
     }
+
+    // Validate the host config directory has actual data
+    if (!is_valid_transmission_config(host_install.config_dir))
+    {
+        result.errors.push_back("Host config directory appears empty or invalid: " + host_install.config_dir);
+        result.success = false;
+        std::cout << "[PortableImport] ERROR: Config directory appears empty or invalid" << std::endl;
+        return result;
+    }
+
+    std::cout << "[PortableImport] Host config directory validated successfully" << std::endl;
 
     // Check for file locks first
     result.locked_files = checkFileLocks(host_install.config_dir);
@@ -301,6 +345,7 @@ ImportResult stageImport(HostInstall const& host_install, std::string const& por
         {
             result.warnings.push_back("  " + lock.process_name + " (PID: " + std::to_string(lock.process_id) + ") has locks on " + lock.file_path);
         }
+        std::cout << "[PortableImport] WARNING: Found " << result.locked_files.size() << " locked file(s)" << std::endl;
     }
 
     // Target portable config directory
@@ -308,6 +353,7 @@ ImportResult stageImport(HostInstall const& host_install, std::string const& por
     if (!dir_exists(portable_config))
     {
         std::filesystem::create_directories(portable_config);
+        std::cout << "[PortableImport] Created portable config directory: " << portable_config << std::endl;
     }
 
     namespace fs = std::filesystem;
@@ -318,21 +364,25 @@ ImportResult stageImport(HostInstall const& host_install, std::string const& por
         std::string src_settings = host_install.config_dir + "\\settings.json";
         std::string dst_settings = portable_config + "\\settings.json";
 
+        std::cout << "[PortableImport] Importing settings.json..." << std::endl;
         if (file_exists(src_settings))
         {
             try
             {
                 fs::copy_file(src_settings, dst_settings, fs::copy_options::overwrite_existing);
                 result.imported_torrents.push_back("settings.json");
+                std::cout << "[PortableImport]   OK: settings.json copied" << std::endl;
             }
             catch (fs::filesystem_error const& e)
             {
                 result.errors.push_back("Failed to copy settings.json: " + std::string(e.what()));
+                std::cout << "[PortableImport]   ERROR: " << e.what() << std::endl;
             }
         }
         else
         {
             result.warnings.push_back("settings.json not found in host config");
+            std::cout << "[PortableImport]   WARNING: settings.json not found" << std::endl;
         }
     }
 
@@ -342,13 +392,18 @@ ImportResult stageImport(HostInstall const& host_install, std::string const& por
         std::string src_resume = host_install.config_dir + "\\resume";
         std::string dst_resume = portable_config + "\\resume";
 
+        std::cout << "[PortableImport] Importing resume directory..." << std::endl;
         if (dir_exists(src_resume))
         {
+            size_t before = result.imported_torrents.size();
             copy_directory_recursive(src_resume, dst_resume, result, options);
+            size_t after = result.imported_torrents.size();
+            std::cout << "[PortableImport]   OK: " << (after - before) << " resume file(s) copied" << std::endl;
         }
         else
         {
             result.warnings.push_back("resume directory not found in host config");
+            std::cout << "[PortableImport]   WARNING: resume directory not found" << std::endl;
         }
     }
 
@@ -358,13 +413,18 @@ ImportResult stageImport(HostInstall const& host_install, std::string const& por
         std::string src_torrents = host_install.config_dir + "\\torrents";
         std::string dst_torrents = portable_config + "\\torrents";
 
+        std::cout << "[PortableImport] Importing torrents directory..." << std::endl;
         if (dir_exists(src_torrents))
         {
+            size_t before = result.imported_torrents.size();
             copy_directory_recursive(src_torrents, dst_torrents, result, options);
+            size_t after = result.imported_torrents.size();
+            std::cout << "[PortableImport]   OK: " << (after - before) << " torrent file(s) copied" << std::endl;
         }
         else
         {
             result.warnings.push_back("torrents directory not found in host config");
+            std::cout << "[PortableImport]   WARNING: torrents directory not found" << std::endl;
         }
     }
 
@@ -373,7 +433,11 @@ ImportResult stageImport(HostInstall const& host_install, std::string const& por
     std::string dst_blocklists = portable_config + "\\blocklists";
     if (dir_exists(src_blocklists))
     {
+        std::cout << "[PortableImport] Importing blocklists..." << std::endl;
+        size_t before = result.imported_torrents.size();
         copy_directory_recursive(src_blocklists, dst_blocklists, result, options);
+        size_t after = result.imported_torrents.size();
+        std::cout << "[PortableImport]   OK: " << (after - before) << " blocklist file(s) copied" << std::endl;
     }
 
     // Import geoip if present
@@ -381,10 +445,18 @@ ImportResult stageImport(HostInstall const& host_install, std::string const& por
     std::string dst_geoip = portable_config + "\\geoip";
     if (dir_exists(src_geoip))
     {
+        std::cout << "[PortableImport] Importing geoip..." << std::endl;
+        size_t before = result.imported_torrents.size();
         copy_directory_recursive(src_geoip, dst_geoip, result, options);
+        size_t after = result.imported_torrents.size();
+        std::cout << "[PortableImport]   OK: " << (after - before) << " geoip file(s) copied" << std::endl;
     }
 
     result.success = result.errors.empty();
+    std::cout << "[PortableImport] Import " << (result.success ? "SUCCEEDED" : "FAILED") << std::endl;
+    std::cout << "[PortableImport]   Imported: " << result.imported_torrents.size() << " file(s)" << std::endl;
+    std::cout << "[PortableImport]   Errors: " << result.errors.size() << std::endl;
+    std::cout << "[PortableImport]   Warnings: " << result.warnings.size() << std::endl;
     return result;
 }
 
