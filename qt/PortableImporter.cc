@@ -132,8 +132,35 @@ std::string drive_to_unc(std::string const& path)
     return path;
 }
 
-namespace
+// Helper function to recursively copy a directory
+static void copy_directory_recursive(std::string const& src, std::string const& dst, ImportResult& result, ImportOptions const& options)
 {
+    namespace fs = std::filesystem;
+    try
+    {
+        for (auto const& entry : fs::recursive_directory_iterator(src))
+        {
+            auto rel_path = fs::relative(entry.path(), src);
+            auto dst_path = fs::path(dst) / rel_path;
+
+            if (entry.is_directory())
+            {
+                fs::create_directories(dst_path);
+            }
+            else if (entry.is_regular_file())
+            {
+                fs::copy_file(entry.path(), dst_path, fs::copy_options::overwrite_existing);
+                result.imported_torrents.push_back(normalize_path(rel_path.string()));
+            }
+        }
+    }
+    catch (fs::filesystem_error const& e)
+    {
+        result.errors.push_back("Failed to copy " + normalize_path(src) + " to " + normalize_path(dst) + ": " + std::string(e.what()));
+    }
+}
+
+std::vector<FileLockInfo> checkFileLocks(std::string const& config_dir)
 {
     std::vector<FileLockInfo> locked_files;
 
