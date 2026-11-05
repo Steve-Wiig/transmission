@@ -262,10 +262,11 @@ void Session::updatePref(tr_quark key)
 ****
 ***/
 
-Session::Session(QString config_dir, Prefs& prefs, RpcClient& rpc)
+Session::Session(QString config_dir, Prefs& prefs, RpcClient& rpc, bool portable)
     : config_dir_{ std::move(config_dir) }
     , prefs_{ prefs }
     , rpc_{ rpc }
+    , portable_{ portable }
 {
     connect(&prefs_, qOverload<tr_quark>(&Prefs::changed), this, &Session::updatePref);
     connect(&rpc_, &RpcClient::httpAuthenticationRequired, this, &Session::httpAuthenticationRequired);
@@ -335,7 +336,21 @@ void Session::start()
     else
     {
         auto config_dir = config_dir_.toStdString();
-        auto const settings = tr_sessionLoadSettings(config_dir);
+        auto settings = tr_sessionLoadSettings(config_dir);
+
+        // Portable mode: isolate from installed host instance
+        if (portable_)
+        {
+            // Use C++ variant API to mutate the settings map
+            if (auto* map = settings.get_if<tr_variant::Map>(); map != nullptr)
+            {
+                // Randomize peer port to avoid 51413 collision with host
+                map->insert_or_assign(TR_KEY_peer_port_random_on_start, true);
+                // Disable RPC server so portable UI doesn't connect to host's RPC on 9091
+                map->insert_or_assign(TR_KEY_rpc_enabled, false);
+            }
+        }
+
         session_ = tr_sessionInit(config_dir, true, settings);
 
         rpc_.start(session_);
