@@ -27,8 +27,6 @@ namespace tr
 {
 namespace portable
 {
-namespace
-{
 
 std::string wide_to_utf8(std::wstring_view wstr)
 {
@@ -87,7 +85,7 @@ std::string get_known_folder_path(REFKNOWNFOLDERID rfid)
 std::string normalize_path(std::string const& path)
 {
     std::string result = path;
-    std::replace(result.begin(), result.end(), '/', '/');
+    std::replace(result.begin(), result.end(), '\\', '/');
     return result;
 }
 
@@ -122,7 +120,7 @@ std::string drive_to_unc(std::string const& path)
         if (pos != std::wstring::npos)
         {
             std::string rel = wide_to_utf8(wpath.substr(pos + 1));
-            std::replace(rel.begin(), rel.end(), '/', '/');
+            std::replace(rel.begin(), rel.end(), '\\', '/');
             unc += "/";
             unc += rel;
         }
@@ -132,58 +130,8 @@ std::string drive_to_unc(std::string const& path)
     return path;
 }
 
-void copy_directory_recursive(std::filesystem::path const& src, std::filesystem::path const& dst, ImportResult& result, ImportOptions const& options)
+namespace
 {
-    namespace fs = std::filesystem;
-
-    if (!fs::exists(src))
-    {
-        result.warnings.push_back("Source directory does not exist: " + src.string());
-        return;
-    }
-
-    try
-    {
-        if (!fs::exists(dst))
-        {
-            fs::create_directories(dst);
-        }
-
-        for (auto const& entry : fs::recursive_directory_iterator(src))
-        {
-            auto rel_path = fs::relative(entry.path(), src);
-            fs::path dest_path = dst / rel_path;
-
-            if (entry.is_directory())
-            {
-                fs::create_directories(dest_path);
-            }
-            else if (entry.is_regular_file())
-            {
-                try
-                {
-                    fs::copy_file(entry.path(), dest_path, fs::copy_options::overwrite_existing);
-                    result.imported_torrents.push_back(normalize_path(rel_path.string()));
-                }
-                catch (fs::filesystem_error const& e)
-                {
-                    std::string err = "Failed to copy " + normalize_path(entry.path().string()) + ": " + e.what();
-                    result.errors.push_back(err);
-                    if (options.fail_fast)
-                        throw;
-                }
-            }
-        }
-    }
-    catch (fs::filesystem_error const& e)
-    {
-        result.errors.push_back("Directory copy failed: " + std::string(e.what()));
-    }
-}
-
-} // namespace
-
-std::vector<FileLockInfo> checkFileLocks(std::string const& config_dir)
 {
     std::vector<FileLockInfo> locked_files;
 
