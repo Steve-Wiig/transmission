@@ -37,6 +37,7 @@
 
 #include "AddData.h"
 #include "Filters.h"
+#include "PortableDiscovery.h"
 #include "Prefs.h"
 #include "QtCompat.h"
 #include "RpcQueue.h"
@@ -335,7 +336,26 @@ void Session::start()
     }
     else
     {
-        auto config_dir = config_dir_.toStdString();
+        // Portable mode: use host config directory directly
+        std::string config_dir;
+        if (portable_)
+        {
+            using namespace tr::portable;
+            auto host_installs = discoverHostInstalls();
+            if (!host_installs.empty())
+            {
+                config_dir = host_installs[0].config_dir;
+            }
+            else
+            {
+                config_dir = config_dir_.toStdString();
+            }
+        }
+        else
+        {
+            config_dir = config_dir_.toStdString();
+        }
+
         auto settings = tr_sessionLoadSettings(config_dir);
 
         // Portable mode: isolate from installed host instance
