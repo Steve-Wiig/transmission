@@ -1282,6 +1282,15 @@ private:
 public:
     // depends-on: settings_, announcer_udp_, global_ip_cache_
     // FIXME(ckerr): circular dependency udp_core -> announcer_udp -> announcer_udp_mediator -> udp_core
+    // 
+    // Circular dependency chain:
+    //   udp_core_ (owned by tr_session)
+    //     -> announcer_udp_ (owned by tr_session, depends on udp_core_ via AnnouncerUdpMediator)
+    //       -> announcer_udp_mediator_ (depends on tr_session, which owns udp_core_)
+    //         -> tr_session::bind_address() -> udp_core_ (via ip_cache_)
+    //
+    // Resolution would require extracting AnnouncerUdpMediator interface or
+    // inverting the dependency. For now, initialization order is carefully managed.
     std::unique_ptr<tr_udp_core> udp_core_;
 
     // monitors the "global pool" speeds

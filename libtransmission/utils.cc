@@ -27,8 +27,8 @@
 #include <vector>
 
 #ifdef _WIN32
-#include <windows.h> /* Sleep(), GetEnvironmentVariable() */
 #include <ws2tcpip.h> /* htonl(), ntohl() */
+#include <windows.h> /* Sleep(), GetEnvironmentVariable() */
 
 #include <shellapi.h> /* CommandLineToArgv() */
 #else
