@@ -171,11 +171,15 @@ void scan_uninstall_key(HKEY root, std::wstring_view base_key, std::vector<HostI
                 config_dir.clear();
             }
 
-            HostInstall install;
-            install.type = type;
-            install.install_dir = install_dir;
-            install.config_dir = config_dir;
-            installs.push_back(std::move(install));
+            // Only add if we have a valid config directory
+            if (!config_dir.empty())
+            {
+                HostInstall install;
+                install.type = type;
+                install.install_dir = install_dir;
+                install.config_dir = config_dir;
+                installs.push_back(std::move(install));
+            }
         }
 
         ++index;
@@ -291,6 +295,13 @@ std::vector<HostInstall> discoverHostInstalls()
                 if (dir_exists(local_state))
                 {
                     std::string config_dir = local_state + "\\config";
+                    // Validate that config_dir actually contains Transmission data
+                    auto is_valid_transmission_config = [](std::string_view path) -> bool {
+                        return dir_exists(std::string(path) + "\\resume") || 
+                               dir_exists(std::string(path) + "\\torrents") || 
+                               file_exists(std::string(path) + "\\settings.json");
+                    };
+
                     bool found = false;
                     for (auto const& inst : installs)
                     {
@@ -300,7 +311,7 @@ std::vector<HostInstall> discoverHostInstalls()
                             break;
                         }
                     }
-                    if (!found)
+                    if (!found && dir_exists(config_dir) && is_valid_transmission_config(config_dir))
                     {
                         HostInstall install;
                         install.type = "msstore";

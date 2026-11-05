@@ -292,10 +292,16 @@ int tr_main(int argc, char** argv)
         {
             // Discover host Transmission installations
             auto host_installs = tr::portable::discoverHostInstalls();
-            if (!host_installs.empty())
+        
+            // Try each host install until one succeeds
+            for (auto const& host_install : host_installs)
             {
-                // Use the first (most recent/likely) host install
-                auto const& host_install = host_installs.front();
+                // Skip installs without a valid config directory
+                if (host_install.config_dir.empty() || 
+                    !tr::portable::dir_exists(host_install.config_dir))
+                {
+                    continue;
+                }
 
                 // Stage import from host to portable directory
                 tr::portable::ImportOptions options;
@@ -314,6 +320,7 @@ int tr_main(int argc, char** argv)
                 {
                     tr::portable::migrateSettings(portable_settings);
                     tr::portable::migrateResumeFiles(portable_config_dir + QStringLiteral("/resume"));
+                    break; // Stop after first successful import
                 }
             }
         }
