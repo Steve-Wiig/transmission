@@ -181,7 +181,7 @@ void copy_directory_recursive(std::filesystem::path const& src, std::filesystem:
     }
 }
 
-} // anonymous namespace
+} // namespace
 
 std::vector<FileLockInfo> checkFileLocks(std::string const& config_dir)
 {
