@@ -72,6 +72,14 @@ bool file_exists(std::string_view path)
     return attrs != INVALID_FILE_ATTRIBUTES && !(attrs & FILE_ATTRIBUTE_DIRECTORY);
 }
 
+// Helper to validate a Transmission config directory
+bool is_valid_transmission_config(std::string_view path)
+{
+    return dir_exists(std::string(path) + "\\resume") || 
+           dir_exists(std::string(path) + "\\torrents") || 
+           file_exists(std::string(path) + "\\settings.json");
+}
+
 std::string get_known_folder_path(REFKNOWNFOLDERID rfid)
 {
     PWSTR path = nullptr;

@@ -151,6 +151,30 @@ void scan_uninstall_key(HKEY root, std::wstring_view base_key, std::vector<HostI
                     config_dir.clear();
             }
 
+            // Also check Roaming AppData (%APPDATA%) since official installer uses it
+            if (config_dir.empty())
+            {
+                std::string roaming_appdata = get_known_folder_path(FOLDERID_RoamingAppData);
+                if (!roaming_appdata.empty())
+                {
+                    std::string roaming_config = roaming_appdata + "\\transmission";
+                    if (dir_exists(roaming_config))
+                        config_dir = roaming_config;
+                }
+            }
+
+            // Validate that config_dir actually contains Transmission data
+            auto is_valid_transmission_config = [](std::string_view path) -> bool {
+                return dir_exists(std::string(path) + "\\resume") || 
+                       dir_exists(std::string(path) + "\\torrents") || 
+                       file_exists(std::string(path) + "\\settings.json");
+            };
+
+            if (!config_dir.empty() && !is_valid_transmission_config(config_dir))
+            {
+                config_dir.clear();
+            }
+
             HostInstall install;
             install.type = type;
             install.install_dir = install_dir;
@@ -189,12 +213,19 @@ std::vector<HostInstall> discoverHostInstalls()
         installs,
         "official");
 
+    // Helper to validate Transmission config directory
+    auto is_valid_transmission_config = [](std::string_view path) -> bool {
+        return dir_exists(std::string(path) + "\\resume") || 
+               dir_exists(std::string(path) + "\\torrents") || 
+               file_exists(std::string(path) + "\\settings.json");
+    };
+
     // 4. Known Folder fallback: %LOCALAPPDATA%\transmission
     std::string local_appdata = get_known_folder_path(FOLDERID_LocalAppData);
     if (!local_appdata.empty())
     {
         std::string config_dir = local_appdata + "\\transmission";
-        if (dir_exists(config_dir))
+        if (dir_exists(config_dir) && is_valid_transmission_config(config_dir))
         {
             // Check if we already have this config_dir
             bool found = false;
@@ -221,7 +252,7 @@ std::vector<HostInstall> discoverHostInstalls()
     if (!roaming_appdata.empty())
     {
         std::string config_dir = roaming_appdata + "\\transmission";
-        if (dir_exists(config_dir))
+        if (dir_exists(config_dir) && is_valid_transmission_config(config_dir))
         {
             // Check if we already have this config_dir
             bool found = false;
