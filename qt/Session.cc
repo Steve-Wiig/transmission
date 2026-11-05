@@ -337,30 +337,8 @@ void Session::start()
     }
     else
     {
-        // Portable mode: use host config directory directly
-        std::string config_dir;
-        if (portable_)
-        {
-            using namespace tr::portable;
-            auto host_installs = discoverHostInstalls();
-            for (auto const& inst : host_installs)
-            {
-                if (!inst.config_dir.empty() && 
-                    dir_exists(inst.config_dir + "\\settings.json"))
-                {
-                    config_dir = inst.config_dir;
-                    break;
-                }
-            }
-            if (config_dir.empty())
-            {
-                config_dir = config_dir_.toStdString();
-            }
-        }
-        else
-        {
-            config_dir = config_dir_.toStdString();
-        }
+        // Portable mode: use the portable config directory (populated by import on first run)
+        std::string config_dir = config_dir_.toStdString();
 
         auto settings = tr_sessionLoadSettings(config_dir);
 
