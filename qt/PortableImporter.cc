@@ -106,7 +106,7 @@ std::string drive_to_unc(std::string const& path)
 
     // WNetGetUniversalNameW requires the path to be a root directory
     std::wstring root_path = wpath;
-    auto pos = root_path.find_first_of(L"/");
+    auto pos = root_path.find_first_of(L"/\\");
     if (pos != std::wstring::npos)
         root_path = root_path.substr(0, pos + 1);
     else
