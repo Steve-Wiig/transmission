@@ -216,7 +216,34 @@ std::vector<HostInstall> discoverHostInstalls()
         }
     }
 
-    // 5. Microsoft Store installation
+    // 5. Known Folder fallback: %APPDATA%\transmission (Roaming)
+    std::string roaming_appdata = get_known_folder_path(FOLDERID_RoamingAppData);
+    if (!roaming_appdata.empty())
+    {
+        std::string config_dir = roaming_appdata + "\\transmission";
+        if (dir_exists(config_dir))
+        {
+            // Check if we already have this config_dir
+            bool found = false;
+            for (auto const& inst : installs)
+            {
+                if (inst.config_dir == config_dir)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                HostInstall install;
+                install.type = "official";
+                install.config_dir = config_dir;
+                installs.push_back(std::move(install));
+            }
+        }
+    }
+
+    // 6. Microsoft Store installation
     if (!local_appdata.empty())
     {
         std::string packages_root = local_appdata + "\\Packages";
