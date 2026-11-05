@@ -7,7 +7,9 @@
 
 #include "PortableDiscovery.h"
 
-#ifdef _WIN32
+#include <QtGlobal>
+
+#if defined(Q_OS_WIN)
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -354,7 +356,7 @@ ImportResult stageImport(HostInstall const& host_install, std::string const& por
 } // namespace portable
 } // namespace tr
 
-#else // !_WIN32
+#else // !Q_OS_WIN
 
 namespace tr
 {
@@ -387,4 +389,4 @@ std::string drive_to_unc(std::string const& path)
 } // namespace portable
 } // namespace tr
 
-#endif // _WIN32
+#endif // Q_OS_WIN
