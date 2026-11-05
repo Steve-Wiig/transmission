@@ -20,6 +20,7 @@
 #pragma comment(lib, "advapi32.lib")
 #endif
 
+#include <libtransmission/file.h>
 #include <libtransmission/file-utils.h>
 
 namespace tr
@@ -49,6 +50,30 @@ std::string dir_name(std::string_view path)
     return std::string{path.substr(0, pos)};
 }
 
+// Helper to join path components
+std::string join_path(std::string_view a, std::string_view b)
+{
+    if (a.empty())
+    {
+        return std::string{b};
+    }
+    if (b.empty())
+    {
+        return std::string{a};
+    }
+    bool a_ends_with_sep = (a.back() == '/' || a.back() == '\\');
+    bool b_starts_with_sep = (b.front() == '/' || b.front() == '\\');
+    if (a_ends_with_sep && b_starts_with_sep)
+    {
+        return std::string{a.substr(0, a.size() - 1)} + std::string{b};
+    }
+    if (!a_ends_with_sep && !b_starts_with_sep)
+    {
+        return std::string{a} + "/" + std::string{b};
+    }
+    return std::string{a} + std::string{b};
+}
+
 #ifdef _WIN32
 
 // Helper to convert wide string to UTF-8
@@ -71,7 +96,7 @@ std::string wide_to_utf8(std::wstring_view wstr)
 // Helper to check if a path exists and is a directory
 bool path_exists(std::string const& path)
 {
-    return tr_sys_path_exists(path.c_str());
+    return tr_sys_path_exists(path);
 }
 
 // Helper to read registry value
@@ -157,24 +182,24 @@ std::optional<DiscoveredInstall> make_discovered_install(std::string install_roo
     }
 
     // Check for settings.json
-    install.has_settings = path_exists(tr_pathbuf{install.config_root, "settings.json"});
+    install.has_settings = path_exists(join_path(install.config_root, "settings.json"));
 
     // Check for resume directory
-    install.has_resume_dir = path_exists(tr_pathbuf{install.config_root, "resume"});
+    install.has_resume_dir = path_exists(join_path(install.config_root, "resume"));
 
     // Check for torrents directory
-    install.has_torrents_dir = path_exists(tr_pathbuf{install.config_root, "torrents"});
+    install.has_torrents_dir = path_exists(join_path(install.config_root, "torrents"));
 
     // Try to find version
     // Check for version file or executable
-    std::string exe_path = tr_pathbuf{install_root, "transmission-daemon.exe"};
+    std::string exe_path = join_path(install_root, "transmission-daemon.exe");
     if (!path_exists(exe_path))
     {
-        exe_path = tr_pathbuf{install_root, "transmission-qt.exe"};
+        exe_path = join_path(install_root, "transmission-qt.exe");
     }
     if (!path_exists(exe_path))
     {
-        exe_path = tr_pathbuf{install_root, "transmission-gtk.exe"};
+        exe_path = join_path(install_root, "transmission-gtk.exe");
     }
     if (path_exists(exe_path))
     {
@@ -223,7 +248,7 @@ std::vector<DiscoveredInstall> discover_installations()
         auto path = get_known_folder_path(FOLDERID_LocalAppData);
         if (path)
         {
-            std::string install_root = tr_pathbuf{*path, "Transmission"};
+            std::string install_root = join_path(*path, "Transmission");
             if (auto install = make_discovered_install(install_root, InstallType::Official))
             {
                 results.push_back(*install);
@@ -236,7 +261,7 @@ std::vector<DiscoveredInstall> discover_installations()
         auto path = get_known_folder_path(FOLDERID_RoamingAppData);
         if (path)
         {
-            std::string install_root = tr_pathbuf{*path, "Transmission"};
+            std::string install_root = join_path(*path, "Transmission");
             if (auto install = make_discovered_install(install_root, InstallType::Official))
             {
                 results.push_back(*install);
@@ -249,7 +274,7 @@ std::vector<DiscoveredInstall> discover_installations()
         auto path = get_known_folder_path(FOLDERID_ProgramData);
         if (path)
         {
-            std::string install_root = tr_pathbuf{*path, "Transmission"};
+            std::string install_root = join_path(*path, "Transmission");
             if (auto install = make_discovered_install(install_root, InstallType::Official))
             {
                 results.push_back(*install);
@@ -263,7 +288,7 @@ std::vector<DiscoveredInstall> discover_installations()
         auto path = get_known_folder_path(FOLDERID_ProgramFiles);
         if (path)
         {
-            std::string install_root = tr_pathbuf{*path, "Transmission"};
+            std::string install_root = join_path(*path, "Transmission");
             if (auto install = make_discovered_install(install_root, InstallType::Official))
             {
                 results.push_back(*install);
@@ -276,7 +301,7 @@ std::vector<DiscoveredInstall> discover_installations()
         auto path = get_known_folder_path(FOLDERID_ProgramFilesX86);
         if (path)
         {
-            std::string install_root = tr_pathbuf{*path, "Transmission"};
+            std::string install_root = join_path(*path, "Transmission");
             if (auto install = make_discovered_install(install_root, InstallType::Official))
             {
                 results.push_back(*install);
