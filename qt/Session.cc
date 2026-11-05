@@ -342,11 +342,16 @@ void Session::start()
         {
             using namespace tr::portable;
             auto host_installs = discoverHostInstalls();
-            if (!host_installs.empty())
+            for (auto const& inst : host_installs)
             {
-                config_dir = host_installs[0].config_dir;
+                if (!inst.config_dir.empty() && 
+                    dir_exists(inst.config_dir + "\\settings.json"))
+                {
+                    config_dir = inst.config_dir;
+                    break;
+                }
             }
-            else
+            if (config_dir.empty())
             {
                 config_dir = config_dir_.toStdString();
             }
