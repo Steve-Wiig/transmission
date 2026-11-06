@@ -45,6 +45,13 @@ struct PortableOptions
     bool fail_fast = false;
 };
 
+struct FileLockInfo
+{
+    std::string process_name;
+    uint32_t process_id = 0;
+    std::string file_path;
+};
+
 struct ImportResult
 {
     bool success = false;
@@ -53,6 +60,7 @@ struct ImportResult
     std::vector<std::string> skipped_torrents;
     std::vector<std::string> errors;
     std::vector<std::string> warnings;
+    std::vector<FileLockInfo> locked_files;
 
     std::optional<tr_variant> merged_settings;
 };
