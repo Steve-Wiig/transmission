@@ -445,7 +445,7 @@ bool migrateSettings(std::string const& settingsPath, bool remap_drive_to_unc)
             {
                 if (auto const opt = iter->second.value_if<std::string_view>(); opt)
                 {
-                    std::string path = *opt;
+                    std::string path(*opt);
                     std::string remapped = drive_to_unc_impl(path);
                     if (remapped != path)
                     {
@@ -546,7 +546,7 @@ bool migrateResumeFiles(std::string const& resumeDir, bool remap_drive_to_unc)
                     {
                         if (auto const opt = iter->second.value_if<std::string_view>(); opt)
                         {
-                            std::string path = *opt;
+                            std::string path(*opt);
                             std::string remapped = drive_to_unc_impl(path);
                             if (remapped != path)
                             {
