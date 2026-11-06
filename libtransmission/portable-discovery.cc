@@ -609,10 +609,12 @@ std::optional<DiscoveredInstall> make_discovered_install(std::string install_roo
             CoTaskMemFree(local_appdata);
         }
         else
-        #endif
         {
             install.config_root = install_root; // Fallback
         }
+        #else
+        install.config_root = install_root; // Fallback
+        #endif
     }
     else if (type == InstallType::MicrosoftStore)
     {
