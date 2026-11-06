@@ -83,10 +83,12 @@ public:
 
 signals:
     void faviconsChanged();
+    void showPreferences();
 
 public slots:
     void addTorrent(AddData addme) const;
     void addWatchdirTorrent(QString const& filename) const;
+    void showPreferences() const;
 
 private slots:
     void onSessionSourceChanged() const;

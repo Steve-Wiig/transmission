@@ -198,6 +198,7 @@ private:
     QStringList complete_sound_command_;
     bool complete_sound_enabled_ = true;
     bool read_clipboard_ = false;
+    QString log_file_;
     int alt_speed_limit_up_ = 0;
     int alt_speed_limit_down_ = 0;
     bool alt_speed_limit_enabled_ = false;
@@ -295,6 +296,7 @@ public:
         Field<&Prefs::complete_sound_command_>{ TR_KEY_torrent_complete_sound_command },
         Field<&Prefs::complete_sound_enabled_>{ TR_KEY_torrent_complete_sound_enabled },
         Field<&Prefs::read_clipboard_>{ TR_KEY_read_clipboard },
+        Field<&Prefs::log_file_>{ TR_KEY_log_file },
         Field<&Prefs::alt_speed_limit_up_>{ TR_KEY_alt_speed_up },
         Field<&Prefs::alt_speed_limit_down_>{ TR_KEY_alt_speed_down },
         Field<&Prefs::alt_speed_limit_enabled_>{ TR_KEY_alt_speed_enabled },
@@ -398,6 +400,7 @@ private:
         { .key = TR_KEY_torrent_complete_sound_command, .type = QMetaType::QStringList },
         { .key = TR_KEY_torrent_complete_sound_enabled, .type = QMetaType::Bool },
         { .key = TR_KEY_read_clipboard, .type = QMetaType::Bool },
+        { .key = TR_KEY_log_file, .type = QMetaType::QString },
         { .key = TR_KEY_alt_speed_up, .type = QMetaType::Int },
         { .key = TR_KEY_alt_speed_down, .type = QMetaType::Int },
         { .key = TR_KEY_alt_speed_enabled, .type = QMetaType::Bool },

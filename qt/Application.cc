@@ -192,6 +192,7 @@ Application::Application(
     connect(session_.get(), &Session::torrentsRemoved, model_.get(), &TorrentModel::removeTorrents);
     connect(session_.get(), &Session::torrentsUpdated, model_.get(), &TorrentModel::updateTorrents);
     connect(watch_dir_.get(), &WatchDir::torrentFileAdded, this, qOverload<QString const&>(&Application::addWatchdirTorrent));
+    connect(this, &Application::showPreferences, this, &Application::showPreferences);
 
     // init from preferences
     for (auto const key : { TR_KEY_watch_dir })
@@ -488,6 +489,12 @@ void Application::addTorrent(AddData addme) const
 void Application::raise() const
 {
     alert(window_.get());
+}
+
+void Application::showPreferences() const
+{
+    auto* dialog = new PrefsDialog{ prefs_, *session_, window_.get() };
+    dialog->show();
 }
 
 bool Application::notifyApp(QString const& title, QString const& body, QStringList const& actions) const
