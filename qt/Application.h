@@ -46,7 +46,8 @@ public:
         QString const& config_dir,
         QStringList const& filenames,
         int& argc,
-        char** argv);
+        char** argv,
+        bool portable = false);
     Application(Application&&) = delete;
     Application(Application const&) = delete;
     Application& operator=(Application&&) = delete;
@@ -123,6 +124,7 @@ private:
     QTranslator app_translator_;
 
     tr::app::FaviconCache<QPixmap> favicon_cache_;
+    bool portable_ = false;
 };
 
 #define trApp (dynamic_cast<Application*>(Application::instance()))

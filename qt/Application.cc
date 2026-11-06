@@ -146,9 +146,11 @@ Application::Application(
     QString const& config_dir,
     QStringList const& filenames,
     int& argc,
-    char** argv)
+    char** argv,
+    bool portable)
     : QApplication{ argc, argv }
     , prefs_{ prefs }
+    , portable_{ portable }
 {
     setApplicationName(ConfigName);
     loadTranslations();
@@ -175,7 +177,7 @@ Application::Application(
     QAccessible::installFactory(&accessibleFactory);
 #endif
 
-    session_ = std::make_unique<Session>(config_dir, prefs_, rpc);
+    session_ = std::make_unique<Session>(config_dir, prefs_, rpc, portable_);
     model_ = std::make_unique<TorrentModel>(prefs_);
     window_ = std::make_unique<MainWindow>(*session_, prefs_, *model_, minimized);
     watch_dir_ = std::make_unique<WatchDir>(*model_);
@@ -238,7 +240,12 @@ Application::Application(
         addTorrent(AddData{ filename });
     }
 
-    InteropHelper::registerObject(this);
+    // In portable mode, don't register as COM server to avoid
+    // conflicting with the installed host instance
+    if (!portable_)
+    {
+        InteropHelper::registerObject(this);
+    }
 
 #ifdef QT_DBUS_LIB
     if (auto bus = QDBusConnection::sessionBus(); bus.isConnected())
