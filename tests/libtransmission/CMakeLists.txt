@@ -42,6 +42,8 @@ target_sources(libtransmission-test
         peer-mgr-wishlist-test.cc
         peer-msgs-test.cc
         platform-test.cc
+        portable-discovery-test.cc
+        portable-integration-test.cc
         quark-test.cc
         remove-test.cc
         rename-test.cc
@@ -69,8 +71,7 @@ target_sources(libtransmission-test
         variant-test.cc
         watchdir-test.cc
         web-test.cc
-        web-utils-test.cc
-        portable-discovery-test.cc)
+        web-utils-test.cc)
 
 if(APPLE)
     target_sources(libtransmission-test
