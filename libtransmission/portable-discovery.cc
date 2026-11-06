@@ -176,9 +176,17 @@ std::optional<DiscoveredInstall> make_discovered_install(std::string install_roo
     }
     else
     {
-        // For official installs, check common config locations
-        std::string config_root = install_root;
-        install.config_root = config_root;
+        // Official installs store config in LocalAppData, not Program Files
+        wchar_t* local_appdata = nullptr;
+        if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &local_appdata)))
+        {
+            install.config_root = wide_to_utf8(local_appdata) + "\\transmission";
+            CoTaskMemFree(local_appdata);
+        }
+        else
+        {
+            install.config_root = install_root; // Fallback
+        }
     }
 
     // Check for settings.json
