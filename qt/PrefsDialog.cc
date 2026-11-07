@@ -179,6 +179,9 @@ void PrefsDialog::initWidget(QCheckBox* const w, tr_quark const key)
 
 void PrefsDialog::initWidget(QDoubleSpinBox* const w, tr_quark const key)
 {
+    w->setKeyboardTracking(true);
+    w->setFocusPolicy(Qt::StrongFocus);
+
     auto updater = [this, key, w]()
     {
         auto const blocker = QSignalBlocker{ w };
@@ -212,6 +215,9 @@ void PrefsDialog::initWidget(QLineEdit* const w, tr_quark const key)
 
 void PrefsDialog::initWidget(QSpinBox* const w, tr_quark const key)
 {
+    w->setKeyboardTracking(true);
+    w->setFocusPolicy(Qt::StrongFocus);
+
     auto updater = [this, key, w]()
     {
         auto const blocker = QSignalBlocker{ w };
@@ -225,6 +231,9 @@ void PrefsDialog::initWidget(QSpinBox* const w, tr_quark const key)
 
 void PrefsDialog::initWidget(QTimeEdit* const w, tr_quark const key)
 {
+    w->setKeyboardTracking(true);
+    w->setFocusPolicy(Qt::StrongFocus);
+
     auto updater = [this, key, w]()
     {
         auto const blocker = QSignalBlocker{ w };
