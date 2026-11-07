@@ -68,7 +68,7 @@ void PrefsDialog::initComboFromItems(std::array<std::pair<QString, T>, N> const&
             set(key, items[static_cast<size_t>(idx)].second);
         }
     };
-    connect(w, qOverload<int>(&QComboBox::activated), std::move(on_activated));
+    connect(w, qOverload<int>(&QComboBox::currentIndexChanged), std::move(on_activated));
 }
 
 void PrefsDialog::initAltSpeedDaysCombo(QComboBox* const w, tr_quark const key)
@@ -306,6 +306,24 @@ void PrefsDialog::initDesktopTab()
 
 // ---
 
+void PrefsDialog::initLoggingTab()
+{
+    initWidget(ui_.logFileButton, TR_KEY_log_file);
+
+    static auto const LogLevelItems = std::array<std::pair<QString, tr_log_level>, 7U>{ {
+        { tr("Off"), TR_LOG_OFF },
+        { tr("Critical"), TR_LOG_CRITICAL },
+        { tr("Error"), TR_LOG_ERROR },
+        { tr("Warning"), TR_LOG_WARN },
+        { tr("Info"), TR_LOG_INFO },
+        { tr("Debug"), TR_LOG_DEBUG },
+        { tr("Trace"), TR_LOG_TRACE },
+    } };
+    initComboFromItems(LogLevelItems, ui_.logLevelCombo, TR_KEY_message_level);
+}
+
+// ---
+
 QString PrefsDialog::getPortStatusText(PrefsDialog::PortTestStatus status) noexcept
 {
     switch (status)
@@ -401,9 +419,15 @@ void PrefsDialog::initNetworkTab()
     initWidget(ui_.enableLpdCheck, TR_KEY_lpd_enabled);
     initWidget(ui_.defaultTrackersPlainTextEdit, TR_KEY_default_trackers);
 
+    // LAN / Slow Network settings
+    initWidget(ui_.maxOpenFilesSpin, TR_KEY_max_open_files);
+    initWidget(ui_.writeFlushThresholdSpin, TR_KEY_write_flush_threshold);
+    initWidget(ui_.verifySleepSpin, TR_KEY_sleep_per_seconds_during_verify);
+
     auto* cr = new ColumnResizer{ this };
     cr->addLayout(ui_.incomingPeersSectionLayout);
     cr->addLayout(ui_.peerLimitsSectionLayout);
+    cr->addLayout(ui_.lanNetworkSectionLayout);
     cr->update();
 
     connect(ui_.testPeerPortButton, &QAbstractButton::clicked, this, &PrefsDialog::onPortTest);
@@ -510,11 +534,13 @@ void PrefsDialog::initDownloadingTab()
     ui_.incompleteDirButton->setMode(PathButton::DirectoryMode);
     ui_.doneDownloadingScriptButton->setMode(PathButton::FileMode);
     ui_.doneSeedingScriptButton->setMode(PathButton::FileMode);
+    ui_.logFileButton->setMode(PathButton::FileOrNewMode);
 
     ui_.watchDirButton->setTitle(tr("Select Watch Directory"));
     ui_.downloadDirButton->setTitle(tr("Select Destination"));
     ui_.incompleteDirButton->setTitle(tr("Select Incomplete Directory"));
     ui_.doneDownloadingScriptButton->setTitle(tr("Select \"Torrent Done Downloading\" Script"));
+    ui_.logFileButton->setTitle(tr("Select Log File"));
 
     ui_.watchDirStack->setMinimumWidth(200);
 
@@ -598,6 +624,7 @@ PrefsDialog::PrefsDialog(Session& session, Prefs& prefs, QWidget* parent)
     initPrivacyTab();
     initNetworkTab();
     initDesktopTab();
+    initLoggingTab();
     initRemoteTab();
 
     connect(&session_, &Session::sessionUpdated, this, &PrefsDialog::sessionUpdated);
