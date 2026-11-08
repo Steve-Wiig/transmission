@@ -517,7 +517,10 @@ void MainWindow::openSession()
 
 void MainWindow::openPreferences()
 {
-    emit trApp->showPreferences();
+    if (trApp)
+    {
+        emit trApp->showPreferences();
+    }
 }
 
 void MainWindow::openProperties()
@@ -962,7 +965,7 @@ torrent_ids_t MainWindow::getSelectedTorrents(bool with_metadata_only) const
 
     for (QModelIndex const& index : ui_.listView->selectionModel()->selectedRows())
     {
-        auto const* tor(index.data(TorrentModel::TorrentRole).value<Torrent const*>());
+        auto const* tor(index.data(static_cast<int>(TorrentModel::TorrentRole)).value<Torrent const*>());
 
         if (tor != nullptr && (!with_metadata_only || tor->hasMetadata()))
         {
@@ -1372,7 +1375,7 @@ void MainWindow::removeTorrents(bool const delete_files)
 
     for (QModelIndex const& index : ui_.listView->selectionModel()->selectedRows())
     {
-        auto const* tor(index.data(TorrentModel::TorrentRole).value<Torrent const*>());
+        auto const* tor(index.data(static_cast<int>(TorrentModel::TorrentRole)).value<Torrent const*>());
         ids.insert(tor->id());
 
         if (tor->connectedPeers())
