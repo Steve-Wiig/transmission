@@ -203,10 +203,22 @@ struct peer {
 #define DHT_SEARCH_EXPIRE_TIME (62 * 60)
 #endif
 
-/* The maximum number of in-flight queries per search. */
-#ifndef DHT_INFLIGHT_QUERIES
-#define DHT_INFLIGHT_QUERIES 4
+/* The maximum number of in-flight queries per search (default). */
+#ifndef DHT_INFLIGHT_DEFAULT
+#define DHT_INFLIGHT_DEFAULT 8
 #endif
+
+/* Minimum and maximum allowed values for in-flight queries. */
+#ifndef DHT_INFLIGHT_MIN
+#define DHT_INFLIGHT_MIN 1
+#endif
+
+#ifndef DHT_INFLIGHT_MAX
+#define DHT_INFLIGHT_MAX 16
+#endif
+
+/* The current maximum in-flight queries per search (runtime configurable). */
+static int dht_inflight_limit = DHT_INFLIGHT_DEFAULT;
 
 /* The retransmit timeout when performing searches. */
 #ifndef DHT_SEARCH_RETRANSMIT
@@ -1249,7 +1261,7 @@ search_step(struct search *sr, dht_callback_t *callback, void *closure)
     j = 0;
     for(i = 0; i < sr->numnodes; i++) {
         j += search_send_get_peers(sr, &sr->nodes[i]);
-        if(j >= DHT_INFLIGHT_QUERIES)
+        if(j >= dht_inflight_limit)
             break;
     }
     sr->step_time = now.tv_sec;
@@ -1840,6 +1852,17 @@ dht_init(int s, int s6, const unsigned char *id, const unsigned char *v)
     free(buckets6);
     buckets6 = NULL;
     return -1;
+}
+
+/* Set the maximum number of in-flight queries per search. */
+void
+dht_set_max_inflight(int limit)
+{
+    if (limit < DHT_INFLIGHT_MIN)
+        limit = DHT_INFLIGHT_MIN;
+    else if (limit > DHT_INFLIGHT_MAX)
+        limit = DHT_INFLIGHT_MAX;
+    dht_inflight_limit = limit;
 }
 
 int

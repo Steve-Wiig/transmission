@@ -74,6 +74,11 @@ void *memmove(void *dest, const void *src, size_t n);
 int memcmp(const void *s1, const void *s2, size_t n);
 #define memcmp(s1, s2, n)	__builtin_memcmp((s1), (s2), (n))
 
+/* For non-freestanding builds, also use compiler builtins for performance */
+#define LIBDEFLATE_MEMSET(s, c, n)	__builtin_memset((s), (c), (n))
+#define LIBDEFLATE_MEMCPY(dest, src, n)	__builtin_memcpy((dest), (src), (n))
+#define LIBDEFLATE_MEMMOVE(dest, src, n)	__builtin_memmove((dest), (src), (n))
+
 #undef LIBDEFLATE_ENABLE_ASSERTIONS
 #else
 #  include <string.h>
@@ -84,6 +89,10 @@ int memcmp(const void *s1, const void *s2, size_t n);
 #  ifdef __clang_analyzer__
 #    define LIBDEFLATE_ENABLE_ASSERTIONS
 #  endif
+/* For non-freestanding builds, use compiler builtins for performance */
+#define LIBDEFLATE_MEMSET(s, c, n)	__builtin_memset((s), (c), (n))
+#define LIBDEFLATE_MEMCPY(dest, src, n)	__builtin_memcpy((dest), (src), (n))
+#define LIBDEFLATE_MEMMOVE(dest, src, n)	__builtin_memmove((dest), (src), (n))
 #endif
 
 /*

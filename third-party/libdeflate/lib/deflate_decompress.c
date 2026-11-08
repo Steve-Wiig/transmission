@@ -741,8 +741,7 @@ build_decode_table(u32 decode_table[],
 	unsigned subtable_bits;   /* log2 of current subtable length */
 
 	/* Count how many codewords have each length, including 0. */
-	for (len = 0; len <= max_codeword_len; len++)
-		len_counts[len] = 0;
+	LIBDEFLATE_MEMSET(len_counts, 0, (max_codeword_len + 1) * sizeof(len_counts[0]));
 	for (sym = 0; sym < num_syms; sym++)
 		len_counts[lens[sym]]++;
 
@@ -771,6 +770,7 @@ build_decode_table(u32 decode_table[],
 	STATIC_ASSERT(UINT32_MAX / (1U << (DEFLATE_MAX_CODEWORD_LEN - 1)) >=
 		      DEFLATE_MAX_NUM_SYMS);
 
+	LIBDEFLATE_MEMSET(offsets, 0, (max_codeword_len + 2) * sizeof(offsets[0]));
 	offsets[0] = 0;
 	offsets[1] = len_counts[0];
 	codespace_used = 0;

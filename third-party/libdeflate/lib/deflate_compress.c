@@ -887,14 +887,13 @@ sort_symbols(unsigned num_syms, const u32 freqs[], u8 lens[], u32 symout[])
 	 * Sort nonzero-frequency symbols using the counters.  At the same time,
 	 * set the codeword lengths of zero-frequency symbols to 0.
 	 */
+	LIBDEFLATE_MEMSET(lens, 0, num_syms * sizeof(lens[0]));
 	for (sym = 0; sym < num_syms; sym++) {
 		u32 freq = freqs[sym];
 
 		if (freq != 0) {
 			symout[counters[MIN(freq, num_counters - 1)]++] =
 				sym | (freq << NUM_SYMBOL_BITS);
-		} else {
-			lens[sym] = 0;
 		}
 	}
 
@@ -1428,6 +1427,27 @@ deflate_make_huffman_codes(const struct deflate_freqs *freqs,
 				  codes->codewords.offset);
 }
 
+static void
+deflate_init_static_codes(struct libdeflate_compressor *c)
+{
+	unsigned i;
+
+	LIBDEFLATE_MEMSET(&c->freqs, 0, sizeof(c->freqs));
+	for (i = 0; i < 144; i++)
+		c->freqs.litlen[i] = 1 << (9 - 8);
+	for (; i < 256; i++)
+		c->freqs.litlen[i] = 1 << (9 - 9);
+	for (; i < 280; i++)
+		c->freqs.litlen[i] = 1 << (9 - 7);
+	for (; i < 288; i++)
+		c->freqs.litlen[i] = 1 << (9 - 8);
+
+	for (i = 0; i < 32; i++)
+		c->freqs.offset[i] = 1 << (5 - 5);
+
+	deflate_make_huffman_codes(&c->freqs, &c->static_codes);
+}
+
 /* Initialize c->static_codes. */
 static void
 deflate_init_static_codes(struct libdeflate_compressor *c)
@@ -1601,6 +1621,7 @@ deflate_precompute_huffman_header(struct libdeflate_compressor *c)
 	 * Compute the "items" (RLE / literal tokens and extra bits) with which
 	 * the codeword lengths in the larger code will be output.
 	 */
+	LIBDEFLATE_MEMSET(c->o.precode.freqs, 0, sizeof(c->o.precode.freqs));
 	c->o.precode.num_items =
 		deflate_compute_precode_items((u8 *)&c->codes.lens,
 					      c->o.precode.num_litlen_syms +
@@ -3442,10 +3463,10 @@ deflate_optimize_and_flush_block(struct libdeflate_compressor *c,
 	 * Force the block to really end at the desired length, even if some
 	 * matches extend beyond it.
 	 */
-	for (i = block_length;
-	     i <= MIN(block_length - 1 + DEFLATE_MAX_MATCH_LEN,
-		      ARRAY_LEN(c->p.n.optimum_nodes) - 1); i++)
-		c->p.n.optimum_nodes[i].cost_to_end = 0x80000000;
+	LIBDEFLATE_MEMSET(&c->p.n.optimum_nodes[block_length], 0x80,
+			  (MIN(block_length - 1 + DEFLATE_MAX_MATCH_LEN,
+			       ARRAY_LEN(c->p.n.optimum_nodes) - 1) - block_length + 1) *
+			  sizeof(c->p.n.optimum_nodes[0]));
 
 	/*
 	 * Sometimes a static Huffman block ends up being cheapest, particularly

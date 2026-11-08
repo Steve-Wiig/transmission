@@ -63,6 +63,9 @@ void dht_hash(void *hash_return, int hash_size,
               const void *v3, int len3);
 int dht_random_bytes(void *buf, size_t size);
 
+/* Set the maximum number of in-flight queries per search (default: 8, min: 1, max: 16) */
+void dht_set_max_inflight(int limit);
+
 #ifdef __cplusplus
 }
 #endif
