@@ -1401,7 +1401,7 @@ deflate_make_huffman_code(unsigned num_syms, unsigned max_codeword_len,
 static void
 deflate_reset_symbol_frequencies(struct libdeflate_compressor *c)
 {
-	memset(&c->freqs, 0, sizeof(c->freqs));
+	LIBDEFLATE_MEMSET(&c->freqs, 0, sizeof(c->freqs));
 }
 
 /*
@@ -1432,6 +1432,7 @@ deflate_init_static_codes(struct libdeflate_compressor *c)
 {
 	unsigned i;
 
+	LIBDEFLATE_MEMSET(&c->freqs, 0, sizeof(c->freqs));
 	for (i = 0; i < 144; i++)
 		c->freqs.litlen[i] = 1 << (9 - 8);
 	for (; i < 256; i++)
