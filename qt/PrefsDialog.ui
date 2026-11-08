@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>PrefsDialog</class>
  <widget class="QDialog" name="PrefsDialog">
@@ -97,7 +97,7 @@
             <item>
              <widget class="QLabel" name="altSpeedLimitsSectionDescriptionLabel">
               <property name="text">
-               <string>&lt;small&gt;Override normal speed limits manually or at scheduled times&lt;/small&gt;</string>
+               <string>Override normal speed limits manually or at scheduled times</string>
               </property>
              </widget>
             </item>
@@ -378,7 +378,7 @@
           <item row="0" column="0" colspan="2">
            <widget class="QCheckBox" name="renamePartialFilesCheck">
             <property name="text">
-             <string>Append &quot;.&amp;part&quot; to incomplete files' names</string>
+             <string>Append ".&amp;part" to incomplete files' names</string>
             </property>
            </widget>
           </item>
@@ -540,100 +540,7 @@
         </spacer>
        </item>
       </layout>
-     </widget>
-     <widget class="QWidget" name="privacyTab">
-      <attribute name="title">
-       <string>Privacy</string>
-      </attribute>
-      <layout class="QVBoxLayout" name="privacyTabLayout">
-       <item>
-        <widget class="QGroupBox" name="encryptionSection">
-         <property name="title">
-          <string>Encryption</string>
-         </property>
-         <layout class="QGridLayout" name="encryptionSectionLayout" columnstretch="0,1">
-          <item row="0" column="0">
-           <widget class="QLabel" name="encryptionModeLabel">
-            <property name="text">
-             <string>&amp;Encryption mode:</string>
-            </property>
-            <property name="buddy">
-             <cstring>encryptionModeCombo</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QComboBox" name="encryptionModeCombo"/>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="blocklistSection">
-         <property name="title">
-          <string>Blocklist</string>
-         </property>
-         <layout class="QGridLayout" name="blocklistSectionLayout" columnstretch="0,1,0">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="blocklistCheck">
-            <property name="text">
-             <string>Enable &amp;blocklist:</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1" colspan="2">
-           <widget class="QLineEdit" name="blocklistEdit"/>
-          </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QLabel" name="blocklistStatusLabel">
-            <property name="text">
-             <string notr="true">...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QPushButton" name="updateBlocklistButton">
-            <property name="text">
-             <string>&amp;Update</string>
-            </property>
-            <property name="autoDefault">
-             <bool>false</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0" colspan="3">
-           <widget class="QCheckBox" name="autoUpdateBlocklistCheck">
-            <property name="text">
-             <string>Enable &amp;automatic updates</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <spacer name="privacyTabBottomSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>1</width>
-           <height>1</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="networkTab">
-      <attribute name="title">
-       <string>Network</string>
-      </attribute>
-      <layout class="QVBoxLayout" name="networkTabLayout">
+     </widget><widget class="QWidget" name="networkTab"><attribute name="title"><string>Network</string></attribute><layout class="QVBoxLayout" name="networkTabLayout">
        <item>
         <widget class="QGroupBox" name="incomingPeersSection">
          <property name="title">
@@ -750,83 +657,6 @@
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="optionsSection">
-         <property name="title">
-          <string>Options</string>
-         </property>
-         <layout class="QVBoxLayout" name="optionsSectionLayout">
-          <item>
-           <widget class="QCheckBox" name="enableUtpCheck">
-            <property name="toolTip">
-             <string>µTP is a tool for reducing network congestion.</string>
-            </property>
-            <property name="text">
-             <string>Enable µ&amp;TP for peer connections</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="enablePexCheck">
-            <property name="toolTip">
-             <string>PEX is a tool for exchanging peer lists with the peers you're connected to.</string>
-            </property>
-            <property name="text">
-             <string>Use PE&amp;X to find more peers</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="enableDhtCheck">
-            <property name="toolTip">
-             <string>DHT is a tool for finding peers without a tracker.</string>
-            </property>
-            <property name="text">
-             <string>Use &amp;DHT to find more peers</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="enableLpdCheck">
-            <property name="toolTip">
-             <string>LPD is a tool for finding peers on your local network.</string>
-            </property>
-            <property name="text">
-             <string>Use &amp;Local Peer Discovery to find more peers</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="defaultTrackersSection">
-         <property name="title">
-          <string>Default Public Trackers</string>
-         </property>
-         <layout class="QVBoxLayout" name="defaultTrackersSectionLayout">
-          <item>
-           <widget class="QPlainTextEdit" name="defaultTrackersPlainTextEdit">
-            <property name="toolTip">
-             <string>Trackers to use on all public torrents.
-
-To add a backup URL, add it on the next line after a primary URL.
-To add a new primary URL, add it after a blank line.</string>
-            </property>
-            <property name="tabChangesFocus">
-             <bool>true</bool>
-            </property>
-            <property name="lineWrapMode">
-             <enum>QPlainTextEdit::NoWrap</enum>
-            </property>
-            <property name="plainText">
-             <string notr="true"/>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
         <spacer name="networkTabBottomSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -838,6 +668,280 @@ To add a new primary URL, add it after a blank line.</string>
           </size>
          </property>
         </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="advancedTab">
+      <attribute name="title">
+       <string>Advanced</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="advancedTabLayout">
+       <item>
+        <widget class="QScrollArea" name="advancedScrollArea">
+         <property name="widgetResizable">
+          <bool>true</bool>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <widget class="QWidget" name="advancedScrollAreaWidgetContents">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>581</width>
+            <height>1000</height>
+           </rect>
+          </property>
+          <layout class="QVBoxLayout" name="advancedScrollAreaLayout">
+           <item>
+            <widget class="QGroupBox" name="encryptionSection">
+             <property name="title">
+              <string>Encryption</string>
+             </property>
+             <layout class="QGridLayout" name="encryptionSectionLayout" columnstretch="0,1">
+              <item row="0" column="0">
+               <widget class="QLabel" name="encryptionModeLabel">
+                <property name="text">
+                 <string>&amp;Encryption mode:</string>
+                </property>
+                <property name="buddy">
+                 <cstring>encryptionModeCombo</cstring>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QComboBox" name="encryptionModeCombo"/>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="blocklistSection">
+             <property name="title">
+              <string>Blocklist</string>
+             </property>
+             <layout class="QGridLayout" name="blocklistSectionLayout" columnstretch="0,1,0">
+              <item row="0" column="0">
+               <widget class="QCheckBox" name="blocklistCheck">
+                <property name="text">
+                 <string>Enable &amp;blocklist:</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1" colspan="2">
+               <widget class="QLineEdit" name="blocklistEdit"/>
+              </item>
+              <item row="1" column="0" colspan="2">
+               <widget class="QLabel" name="blocklistStatusLabel">
+                <property name="text">
+                 <string notr="true">...</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QPushButton" name="updateBlocklistButton">
+                <property name="text">
+                 <string>&amp;Update</string>
+                </property>
+                <property name="autoDefault">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0" colspan="3">
+               <widget class="QCheckBox" name="autoUpdateBlocklistCheck">
+                <property name="text">
+                 <string>Enable &amp;automatic updates</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="peerProtocolsSection">
+             <property name="title">
+              <string>Peer Protocols</string>
+             </property>
+             <layout class="QVBoxLayout" name="peerProtocolsSectionLayout">
+              <item>
+               <widget class="QCheckBox" name="enableUtpCheck">
+                <property name="toolTip">
+                 <string>µTP is a tool for reducing network congestion.</string>
+                </property>
+                <property name="text">
+                 <string>Enable µ&amp;TP for peer connections</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="enablePexCheck">
+                <property name="toolTip">
+                 <string>PEX is a tool for exchanging peer lists with the peers you're connected to.</string>
+                </property>
+                <property name="text">
+                 <string>Use PE&amp;X to find more peers</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="enableDhtCheck">
+                <property name="toolTip">
+                 <string>DHT is a tool for finding peers without a tracker.</string>
+                </property>
+                <property name="text">
+                 <string>Use &amp;DHT to find more peers</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="enableLpdCheck">
+                <property name="toolTip">
+                 <string>LPD is a tool for finding peers on your local network.</string>
+                </property>
+                <property name="text">
+                 <string>Use &amp;Local Peer Discovery to find more peers</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="defaultTrackersSection">
+             <property name="title">
+              <string>Default Public Trackers</string>
+             </property>
+             <layout class="QVBoxLayout" name="defaultTrackersSectionLayout">
+              <item>
+               <widget class="QPlainTextEdit" name="defaultTrackersPlainTextEdit">
+                <property name="toolTip">
+                 <string>Trackers to use on all public torrents.
+
+To add a backup URL, add it on the next line after a primary URL.
+To add a new primary URL, add it after a blank line.</string>
+                </property>
+                <property name="tabChangesFocus">
+                 <bool>true</bool>
+                </property>
+                <property name="lineWrapMode">
+                 <enum>QPlainTextEdit::NoWrap</enum>
+                </property>
+                <property name="plainText">
+                 <string notr="true"/>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="lanNetworkSection">
+             <property name="title">
+              <string>LAN / Slow Network</string>
+             </property>
+             <layout class="QGridLayout" name="lanNetworkSectionLayout" columnstretch="0,1">
+              <item row="0" column="0">
+               <widget class="QLabel" name="maxOpenFilesLabel">
+                <property name="text">
+                 <string>Maximum &amp;open files:</string>
+                </property>
+                <property name="buddy">
+                 <cstring>maxOpenFilesSpin</cstring>
+                </property>
+                <property name="toolTip">
+                 <string>Higher values reduce file open/close churn on slow network filesystems (SMB, NFS).</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QSpinBox" name="maxOpenFilesSpin">
+                <property name="minimum">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <number>1024</number>
+                </property>
+                <property name="singleStep">
+                 <number>16</number>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="writeFlushThresholdLabel">
+                <property name="text">
+                 <string>Write flush threshold (&amp;MiB):</string>
+                </property>
+                <property name="buddy">
+                 <cstring>writeFlushThresholdSpin</cstring>
+                </property>
+                <property name="toolTip">
+                 <string>Larger buffers reduce syscall frequency on high-latency network storage.</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QSpinBox" name="writeFlushThresholdSpin">
+                <property name="minimum">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <number>64</number>
+                </property>
+                <property name="singleStep">
+                 <number>1</number>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="verifySleepLabel">
+                <property name="text">
+                 <string>Verification sleep (&amp;ms per second):</string>
+                </property>
+                <property name="buddy">
+                 <cstring>verifySleepSpin</cstring>
+                </property>
+                <property name="toolTip">
+                 <string>Pause during verification to reduce I/O contention on slow networks.</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QSpinBox" name="verifySleepSpin">
+                <property name="minimum">
+                 <number>0</number>
+                </property>
+                <property name="maximum">
+                 <number>1000</number>
+                </property>
+                <property name="singleStep">
+                 <number>50</number>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <spacer name="advancedTabBottomSpacer">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>1</width>
+               <height>1</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -914,138 +1018,197 @@ To add a new primary URL, add it after a blank line.</string>
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="remoteTab">
+     <widget class="QWidget" name="loggingTab">
       <attribute name="title">
-       <string>Remote</string>
+       <string>Logging</string>
       </attribute>
-      <layout class="QVBoxLayout" name="remoteTabLayout">
+      <layout class="QVBoxLayout" name="loggingTabLayout">
        <item>
-        <widget class="QGroupBox" name="remoteControlSection">
+        <widget class="QGroupBox" name="logFileSection">
          <property name="title">
-          <string>Remote Control</string>
+          <string>Log File</string>
          </property>
-         <layout class="QGridLayout" name="remoteControlSectionLayout" columnstretch="0,1,0">
-          <item row="0" column="0" colspan="2">
-           <widget class="QCheckBox" name="enableRpcCheck">
+         <layout class="QGridLayout" name="logFileSectionLayout" columnstretch="0,1">
+          <item row="0" column="0">
+           <widget class="QLabel" name="logFileLabel">
             <property name="text">
-             <string>Allow &amp;remote access</string>
+             <string>Log &amp;file:</string>
             </property>
-            <property name="checked">
-             <bool>true</bool>
+            <property name="buddy">
+             <cstring>logFileButton</cstring>
             </property>
            </widget>
           </item>
-          <item row="0" column="2">
-           <widget class="QPushButton" name="openWebClientButton">
-            <property name="text">
-             <string>&amp;Open web client</string>
-            </property>
-            <property name="autoDefault">
-             <bool>false</bool>
+          <item row="0" column="1">
+           <widget class="PathButton" name="logFileButton">
+            <property name="toolTip">
+             <string>Path to the log file. Leave empty to disable file logging.</string>
             </property>
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QLabel" name="rpcPortLabel">
+           <widget class="QLabel" name="logLevelLabel">
             <property name="text">
-             <string>HTTP &amp;port:</string>
+             <string>Log &amp;level:</string>
             </property>
             <property name="buddy">
-             <cstring>rpcPortSpin</cstring>
+             <cstring>logLevelCombo</cstring>
             </property>
            </widget>
           </item>
-          <item row="1" column="1" colspan="2">
-           <widget class="QSpinBox" name="rpcPortSpin">
-            <property name="minimum">
-             <number>1</number>
-            </property>
-            <property name="maximum">
-             <number>65535</number>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0" colspan="3">
-           <widget class="QCheckBox" name="requireRpcAuthCheck">
-            <property name="text">
-             <string>Use &amp;authentication</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="rpcUsernameLabel">
-            <property name="text">
-             <string>&amp;Username:</string>
-            </property>
-            <property name="buddy">
-             <cstring>rpcUsernameEdit</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1" colspan="2">
-           <widget class="QLineEdit" name="rpcUsernameEdit"/>
-          </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="rpcPasswordLabel">
-            <property name="text">
-             <string>Pass&amp;word:</string>
-            </property>
-            <property name="buddy">
-             <cstring>rpcPasswordEdit</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="1" colspan="2">
-           <widget class="QLineEdit" name="rpcPasswordEdit">
-            <property name="echoMode">
-             <enum>QLineEdit::Password</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0" colspan="3">
-           <widget class="QCheckBox" name="enableRpcWhitelistCheck">
-            <property name="text">
-             <string>Only allow these IP a&amp;ddresses:</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="0">
-           <widget class="QLabel" name="rpcWhitelistLabel">
-            <property name="text">
-             <string>Addresses:</string>
-            </property>
-            <property name="buddy">
-             <cstring>rpcWhitelistEdit</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="1" colspan="2">
-           <widget class="QLineEdit" name="rpcWhitelistEdit"/>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="logLevelCombo"/>
           </item>
          </layout>
         </widget>
-       </item>
-       <item>
-        <spacer name="remoteTabBottomSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>1</width>
-           <height>1</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
+        </item>
+        <item>
+         <spacer name="loggingTabBottomSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>1</width>
+            <height>1</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="remoteTab">
+       <attribute name="title">
+        <string>Remote</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="remoteTabLayout">
+        <item>
+         <widget class="QGroupBox" name="remoteControlSection">
+          <property name="title">
+           <string>Remote Control</string>
+          </property>
+          <layout class="QGridLayout" name="remoteControlSectionLayout" columnstretch="0,1,0">
+           <item row="0" column="0" colspan="2">
+            <widget class="QCheckBox" name="enableRpcCheck">
+             <property name="text">
+              <string>Allow &amp;remote access</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QPushButton" name="openWebClientButton">
+             <property name="text">
+              <string>&amp;Open web client</string>
+             </property>
+             <property name="autoDefault">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="rpcPortLabel">
+             <property name="text">
+              <string>HTTP &amp;port:</string>
+             </property>
+             <property name="buddy">
+              <cstring>rpcPortSpin</cstring>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1" colspan="2">
+            <widget class="QSpinBox" name="rpcPortSpin">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>65535</number>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0" colspan="3">
+            <widget class="QCheckBox" name="requireRpcAuthCheck">
+             <property name="text">
+              <string>Use &amp;authentication</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="rpcUsernameLabel">
+             <property name="text">
+              <string>&amp;Username:</string>
+             </property>
+             <property name="buddy">
+              <cstring>rpcUsernameEdit</cstring>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1" colspan="2">
+            <widget class="QLineEdit" name="rpcUsernameEdit"/>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="rpcPasswordLabel">
+             <property name="text">
+              <string>Pass&amp;word:</string>
+             </property>
+             <property name="buddy">
+              <cstring>rpcPasswordEdit</cstring>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1" colspan="2">
+            <widget class="QLineEdit" name="rpcPasswordEdit">
+             <property name="echoMode">
+              <enum>QLineEdit::Password</enum>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0" colspan="3">
+            <widget class="QCheckBox" name="enableRpcWhitelistCheck">
+             <property name="text">
+              <string>Only allow these IP a&amp;ddresses:</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0">
+            <widget class="QLabel" name="rpcWhitelistLabel">
+             <property name="text">
+              <string>Addresses:</string>
+             </property>
+             <property name="buddy">
+              <cstring>rpcWhitelistEdit</cstring>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="1" colspan="2">
+            <widget class="QLineEdit" name="rpcWhitelistEdit"/>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <spacer name="remoteTabBottomSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>1</width>
+            <height>1</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
     </widget>
    </item>
    <item>
@@ -1222,3 +1385,4 @@ To add a new primary URL, add it after a blank line.</string>
   </connection>
  </connections>
 </ui>
+

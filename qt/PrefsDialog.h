@@ -45,6 +45,9 @@ private slots:
     void onBlocklistDialogDestroyed(QObject* o);
     void onBlocklistUpdated(int64_t n);
 
+protected:
+    void closeEvent(QCloseEvent* event) override;
+
 private:
     enum class PortTestStatus : uint8_t
     {
@@ -86,12 +89,15 @@ private:
     void initDownloadingTab();
     void initSeedingTab();
     void initSpeedTab();
-    void initPrivacyTab();
     void initNetworkTab();
     void initDesktopTab();
+    void initLoggingTab();
     void initRemoteTab();
+    void initAdvancedTab();
 
-    Session& session_;
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
+    Session& session_;;;
     Prefs& prefs_;
 
     Ui::PrefsDialog ui_ = {};

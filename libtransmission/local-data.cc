@@ -228,7 +228,7 @@ public:
     }
 
 private:
-    static constexpr size_t WriteFlushThreshold = 256U * 1024U; // 256KB flush threshold
+    static constexpr size_t WriteFlushThreshold = 1024U * 1024U; // 1MB flush threshold - larger for slow LAN/SMB
 
     mutable std::mutex write_mutex_;
 
@@ -302,7 +302,7 @@ private:
 
     tr_open_files& open_files_;
     tr_torrents const& torrents_;
-    /// Buffered writes may be lost on crash (up to WriteFlushThreshold
+    /// Larger buffer reduces the number of network syscalls on slow LAN, keeping the session thread responsive.
     /// per torrent). This is acceptable for BitTorrent since missing
     /// pieces are re-downloaded. Do NOT use this pattern for data where
     /// loss is unacceptable.

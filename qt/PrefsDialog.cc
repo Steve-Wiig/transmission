@@ -218,6 +218,13 @@ void PrefsDialog::initWidget(QSpinBox* const w, tr_quark const key)
     w->setKeyboardTracking(true);
     w->setFocusPolicy(Qt::StrongFocus);
 
+    // Force focus to spinbox when user clicks internal up/down arrows
+    connect(w, qOverload<int>(&QSpinBox::valueChanged), [w]() {
+        if (!w->hasFocus()) {
+            w->setFocus(Qt::MouseFocusReason);
+        }
+    });
+
     auto updater = [this, key, w]()
     {
         auto const blocker = QSignalBlocker{ w };
@@ -249,6 +256,49 @@ void PrefsDialog::initWidget(QTimeEdit* const w, tr_quark const key)
         set(key, minutes);
     };
     connect(w, &QAbstractSpinBox::editingFinished, std::move(on_editing_finished));
+}
+
+// ---
+
+bool PrefsDialog::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == ui_.advancedScrollArea)
+    {
+        if (event->type() == QEvent::KeyPress)
+        {
+            QKeyEvent* ke = static_cast<QKeyEvent*>(event);
+            if (ke->key() == Qt::Key_Up || ke->key() == Qt::Key_Down)
+            {
+                QWidget* fw = QApplication::focusWidget();
+                QAbstractSpinBox* spinBox = qobject_cast<QAbstractSpinBox*>(fw);
+                
+                // If focus is on the internal QLineEdit, grab the parent QSpinBox
+                if (!spinBox && fw) {
+                    spinBox = qobject_cast<QAbstractSpinBox*>(fw->parent());
+                }
+                
+                if (spinBox) {
+                    // Send directly to the SpinBox to trigger stepUp/stepDown
+                    QApplication::sendEvent(spinBox, ke);
+                    return true; // Consume event so QAbstractScrollArea doesn't scroll
+                }
+            }
+        }
+        // Wheel events: let Qt bubble them natively
+    }
+    return BaseDialog::eventFilter(watched, event);
+}
+
+// ---
+
+void PrefsDialog::closeEvent(QCloseEvent* event)
+{
+    // Cancel any pending blocklist update to avoid blocking shutdown
+    if (blocklist_dialog_ != nullptr)
+    {
+        onUpdateBlocklistCancelled();
+    }
+    BaseDialog::closeEvent(event);
 }
 
 // ---
@@ -422,27 +472,54 @@ void PrefsDialog::initNetworkTab()
     initWidget(ui_.enablePortForwardingCheck, TR_KEY_port_forwarding_enabled);
     initWidget(ui_.torrentPeerLimitSpin, TR_KEY_peer_limit_per_torrent);
     initWidget(ui_.globalPeerLimitSpin, TR_KEY_peer_limit_global);
-    initWidget(ui_.enableUtpCheck, TR_KEY_utp_enabled);
-    initWidget(ui_.enablePexCheck, TR_KEY_pex_enabled);
-    initWidget(ui_.enableDhtCheck, TR_KEY_dht_enabled);
-    initWidget(ui_.enableLpdCheck, TR_KEY_lpd_enabled);
-    initWidget(ui_.defaultTrackersPlainTextEdit, TR_KEY_default_trackers);
-
-    // LAN / Slow Network settings
-    initWidget(ui_.maxOpenFilesSpin, TR_KEY_max_open_files);
-    initWidget(ui_.writeFlushThresholdSpin, TR_KEY_write_flush_threshold);
-    initWidget(ui_.verifySleepSpin, TR_KEY_sleep_per_seconds_during_verify);
 
     auto* cr = new ColumnResizer{ this };
     cr->addLayout(ui_.incomingPeersSectionLayout);
     cr->addLayout(ui_.peerLimitsSectionLayout);
-    cr->addLayout(ui_.lanNetworkSectionLayout);
     cr->update();
 
     connect(ui_.testPeerPortButton, &QAbstractButton::clicked, this, &PrefsDialog::onPortTest);
     connect(&session_, &Session::portTested, this, &PrefsDialog::onPortTested);
 
     updatePortStatusLabel();
+}
+
+// ---
+
+void PrefsDialog::initAdvancedTab()
+{
+    // Prevent scroll area from intercepting keyboard/wheel events for spin boxes
+    ui_.advancedScrollArea->setFocusPolicy(Qt::NoFocus);
+    ui_.advancedScrollArea->installEventFilter(this);
+
+    // Encryption
+    initEncryptionCombo(ui_.encryptionModeCombo, TR_KEY_encryption);
+
+    // Blocklist
+    initWidget(ui_.blocklistCheck, TR_KEY_blocklist_enabled);
+    initWidget(ui_.blocklistEdit, TR_KEY_blocklist_url);
+    initWidget(ui_.autoUpdateBlocklistCheck, TR_KEY_blocklist_updates_enabled);
+
+    block_widgets_ << ui_.blocklistEdit << ui_.blocklistStatusLabel << ui_.updateBlocklistButton
+                   << ui_.autoUpdateBlocklistCheck;
+
+    connect(ui_.updateBlocklistButton, &QAbstractButton::clicked, this, &PrefsDialog::onUpdateBlocklistClicked);
+
+    updateBlocklistLabel();
+
+    // Peer Protocols
+    initWidget(ui_.enableUtpCheck, TR_KEY_utp_enabled);
+    initWidget(ui_.enablePexCheck, TR_KEY_pex_enabled);
+    initWidget(ui_.enableDhtCheck, TR_KEY_dht_enabled);
+    initWidget(ui_.enableLpdCheck, TR_KEY_lpd_enabled);
+
+    // Default Public Trackers
+    initWidget(ui_.defaultTrackersPlainTextEdit, TR_KEY_default_trackers);
+
+    // LAN / Slow Network
+    initWidget(ui_.maxOpenFilesSpin, TR_KEY_max_open_files);
+    initWidget(ui_.writeFlushThresholdSpin, TR_KEY_write_flush_threshold);
+    initWidget(ui_.verifySleepSpin, TR_KEY_sleep_per_seconds_during_verify);
 }
 
 // ---
@@ -478,26 +555,6 @@ void PrefsDialog::onUpdateBlocklistClicked()
     connect(&session_, &Session::blocklistUpdated, this, &PrefsDialog::onBlocklistUpdated);
     blocklist_dialog_->show();
     session_.updateBlocklist();
-}
-
-void PrefsDialog::initPrivacyTab()
-{
-    initEncryptionCombo(ui_.encryptionModeCombo, TR_KEY_encryption);
-    initWidget(ui_.blocklistCheck, TR_KEY_blocklist_enabled);
-    initWidget(ui_.blocklistEdit, TR_KEY_blocklist_url);
-    initWidget(ui_.autoUpdateBlocklistCheck, TR_KEY_blocklist_updates_enabled);
-
-    block_widgets_ << ui_.blocklistEdit << ui_.blocklistStatusLabel << ui_.updateBlocklistButton
-                   << ui_.autoUpdateBlocklistCheck;
-
-    auto* cr = new ColumnResizer{ this };
-    cr->addLayout(ui_.encryptionSectionLayout);
-    cr->addLayout(ui_.blocklistSectionLayout);
-    cr->update();
-
-    connect(ui_.updateBlocklistButton, &QAbstractButton::clicked, this, &PrefsDialog::onUpdateBlocklistClicked);
-
-    updateBlocklistLabel();
 }
 
 // ---
@@ -630,8 +687,8 @@ PrefsDialog::PrefsDialog(Session& session, Prefs& prefs, QWidget* parent)
     initSpeedTab();
     initDownloadingTab();
     initSeedingTab();
-    initPrivacyTab();
     initNetworkTab();
+    initAdvancedTab();
     initDesktopTab();
     initLoggingTab();
     initRemoteTab();

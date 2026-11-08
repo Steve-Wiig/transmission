@@ -1,0 +1,1 @@
+cmake -B build -G "MinGW Makefiles" -DENABLE_QT=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="C:/msys64/mingw64"

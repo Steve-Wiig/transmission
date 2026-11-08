@@ -69,6 +69,6 @@ private:
 #ifndef TR_MAX_OPEN_FILES
 #   define TR_MAX_OPEN_FILES 128U
 #endif
-    static constexpr size_t MaxOpenFiles = TR_MAX_OPEN_FILES; // increased from 32 to reduce SMB open/close churn
+    static constexpr size_t MaxOpenFiles = 256U; // increased from 32 to reduce SMB open/close churn on slow LAN
     tr_lru_cache<Key, Val, MaxOpenFiles> pool_;
 };

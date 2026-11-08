@@ -80,7 +80,11 @@ std::string join_path(std::string_view a, std::string_view b)
     }
     if (!a_ends_with_sep && !b_starts_with_sep)
     {
+#ifdef _WIN32
+        return std::string{a} + "\\" + std::string{b};
+#else
         return std::string{a} + "/" + std::string{b};
+#endif
     }
     return std::string{a} + std::string{b};
 }
@@ -366,6 +370,10 @@ bool is_valid_transmission_config(std::string_view path)
 void copy_directory_recursive(std::string const& src, std::string const& dst, ImportResult& result, PortableOptions const& options)
 {
     namespace fs = std::filesystem;
+
+    // Ensure destination directory exists
+    fs::create_directories(dst);
+
     try
     {
         for (auto const& entry : fs::recursive_directory_iterator(src))
@@ -429,10 +437,15 @@ bool migrateSettings(std::string const& settingsPath, bool remap_drive_to_unc)
     };
 
     // Settings keys to disable for security (portable mode should not run host scripts)
+    // Include both kebab-case (APICOMPAT) and snake_case variants
     static constexpr tr_quark settings_disable_keys[] = {
+        TR_KEY_watch_dir_enabled_kebab_APICOMPAT,
         TR_KEY_watch_dir_enabled,
+        TR_KEY_script_torrent_added_enabled_kebab_APICOMPAT,
         TR_KEY_script_torrent_added_enabled,
+        TR_KEY_script_torrent_done_enabled_kebab_APICOMPAT,
         TR_KEY_script_torrent_done_enabled,
+        TR_KEY_script_torrent_done_seeding_enabled_kebab_APICOMPAT,
         TR_KEY_script_torrent_done_seeding_enabled,
     };
 
@@ -476,12 +489,16 @@ bool migrateSettings(std::string const& settingsPath, bool remap_drive_to_unc)
     }
 
     // Also ensure watch-dir is empty if watch-dir-enabled is disabled
-    if (auto const iter = map->find(TR_KEY_watch_dir); iter != map->end())
+    // Check both kebab-case and snake_case variants
+    for (auto const key : {TR_KEY_watch_dir_kebab_APICOMPAT, TR_KEY_watch_dir})
     {
-        if (auto const opt = iter->second.value_if<std::string_view>(); opt && !opt->empty())
+        if (auto const iter = map->find(key); iter != map->end())
         {
-            map->insert_or_assign(TR_KEY_watch_dir, "");
-            modified = true;
+            if (auto const opt = iter->second.value_if<std::string_view>(); opt && !opt->empty())
+            {
+                map->insert_or_assign(key, "");
+                modified = true;
+            }
         }
     }
 
@@ -577,6 +594,70 @@ bool migrateResumeFiles(std::string const& resumeDir, bool remap_drive_to_unc)
     }
 
     return any_modified;
+}
+
+// Merge host settings with local portable settings, preserving local overrides for logging
+bool mergeSettings(std::string const& hostSettingsPath, std::string const& portableSettingsPath)
+{
+    auto serde = tr_variant_serde::json();
+
+    // Parse host settings
+    auto opt_host = serde.parse_file(hostSettingsPath);
+    if (!opt_host)
+        return false;
+
+    // Parse local portable settings
+    auto opt_local = serde.parse_file(portableSettingsPath);
+    if (!opt_local)
+    {
+        // No local settings, just copy host settings
+        std::filesystem::copy_file(hostSettingsPath, portableSettingsPath, std::filesystem::copy_options::overwrite_existing);
+        return true;
+    }
+
+    auto host_var = std::move(*opt_host);
+    auto local_var = std::move(*opt_local);
+
+    auto* host_map = host_var.get_if<tr_variant::Map>();
+    auto* local_map = local_var.get_if<tr_variant::Map>();
+
+    if (!host_map || !local_map)
+        return false;
+
+    // Local keys to preserve (don't overwrite with host values)
+    static constexpr tr_quark local_override_keys[] = {
+        TR_KEY_log_file,
+        TR_KEY_message_level,
+    };
+
+    // Merge: start with host settings, then apply local overrides
+    tr_variant::Map merged;
+    merged.reserve(host_map->size() + std::size(local_override_keys));
+
+    // Move all host settings into merged
+    for (auto& pair : *host_map)
+    {
+        merged.insert_or_assign(std::move(pair.first), std::move(pair.second));
+    }
+
+    // Apply local overrides for specific keys
+    for (auto const& key : local_override_keys)
+    {
+        if (auto const iter = local_map->find(key); iter != local_map->end())
+        {
+            // Move the local value into merged (const_cast to move from const ref)
+            merged.insert_or_assign(key, std::move(const_cast<tr_variant&>(iter->second)));
+        }
+    }
+
+    // Write merged settings
+    tr_variant merged_var(std::move(merged));
+    auto const json_str = serde.to_string(merged_var);
+    std::ofstream out(portableSettingsPath, std::ios::binary);
+    if (!out)
+        return false;
+    out.write(json_str.data(), json_str.size());
+    return true;
 }
 
 // Build a DiscoveredInstall from an install root path
@@ -941,12 +1022,36 @@ ImportResult import_from_install(
         {
             try
             {
-                std::filesystem::copy_file(src_settings, dst_settings, std::filesystem::copy_options::overwrite_existing);
-                
-                // Remap paths in the copied settings.json
-                migrateSettings(dst_settings, options.remap_drive_to_unc);
-                
-                result.imported_torrents.push_back("settings.json");
+                bool settings_imported = false;
+
+                if (options.merge_settings && file_exists(dst_settings))
+                {
+                    // Merge host settings with local portable settings, preserving local overrides
+                    settings_imported = mergeSettings(src_settings, dst_settings);
+                    
+                    // Remap paths in the merged settings.json
+                    if (settings_imported && options.remap_drive_to_unc)
+                    {
+                        migrateSettings(dst_settings, options.remap_drive_to_unc);
+                    }
+                    
+                    result.warnings.emplace_back("Merged settings from host installation (preserved local logging settings)");
+                }
+                else
+                {
+                    // Full import: copy and remap
+                    std::filesystem::copy_file(src_settings, dst_settings, std::filesystem::copy_options::overwrite_existing);
+                    
+                    // Remap paths in the copied settings.json
+                    migrateSettings(dst_settings, options.remap_drive_to_unc);
+                    
+                    settings_imported = true;
+                }
+
+                if (settings_imported)
+                {
+                    result.imported_torrents.push_back("settings.json");
+                }
             }
             catch (std::filesystem::filesystem_error const& e)
             {

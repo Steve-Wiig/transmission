@@ -123,7 +123,9 @@ public:
     };
     std::vector<std::string> ip_endpoint_ipv4 = { "https://ip4.transmissionbt.com/" };
     std::vector<std::string> ip_endpoint_ipv6 = { "https://ip6.transmissionbt.com/" };
-    std::chrono::milliseconds sleep_per_seconds_during_verify = std::chrono::milliseconds{ 100 };
+    std::chrono::milliseconds sleep_per_seconds_during_verify = std::chrono::milliseconds{ 200 };
+    size_t max_open_files = 256U;
+    size_t write_flush_threshold_mib = 1U;
     std::optional<std::string> proxy_url;
     std::string announce_ip;
     std::string bind_address_ipv4;
@@ -206,6 +208,8 @@ public:
         Field<&SessionSettings::seed_queue_size>{ TR_KEY_seed_queue_size },
         Field<&SessionSettings::sequential_download>{ TR_KEY_sequential_download },
         Field<&SessionSettings::sleep_per_seconds_during_verify>{ TR_KEY_sleep_per_seconds_during_verify },
+        Field<&SessionSettings::max_open_files>{ TR_KEY_max_open_files },
+        Field<&SessionSettings::write_flush_threshold_mib>{ TR_KEY_write_flush_threshold },
         Field<&SessionSettings::speed_limit_down>{ TR_KEY_speed_limit_down },
         Field<&SessionSettings::speed_limit_down_enabled>{ TR_KEY_speed_limit_down_enabled },
         Field<&SessionSettings::speed_limit_up>{ TR_KEY_speed_limit_up },

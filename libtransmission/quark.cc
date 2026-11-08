@@ -308,6 +308,7 @@ auto constexpr MyStatic = std::array<std::string_view, TR_N_KEYS>{
     "left_until_done"sv, // rpc
     "length"sv, // .torrent, rpc
     "location"sv, // rpc
+    "log_file"sv, // qt app
     "lpd-enabled"sv, // daemon, rpc, tr_session::Settings
     "lpd_enabled"sv, // daemon, rpc, tr_session::Settings
     "m"sv, // BEP0010, BEP0011; BT protocol
@@ -330,6 +331,7 @@ auto constexpr MyStatic = std::array<std::string_view, TR_N_KEYS>{
     "max-peers"sv, // .resume
     "maxConnectedPeers"sv, // rpc
     "max_connected_peers"sv, // rpc
+    "max_open_files"sv, // tr_session::Settings
     "max_peers"sv, // .resume
     "memory-bytes"sv, // rpc
     "memory-units"sv, // rpc
@@ -740,6 +742,7 @@ auto constexpr MyStatic = std::array<std::string_view, TR_N_KEYS>{
     "webseedsSendingToUs"sv, // rpc
     "webseeds_ex"sv, // rpc
     "webseeds_sending_to_us"sv, // rpc
+    "write_flush_threshold"sv, // tr_session::Settings
     "yourip"sv, // BEP0010; BT protocol
 };
 
