@@ -487,7 +487,7 @@ void MainWindow::setSortAscendingPref(bool b)
 
 void MainWindow::showEvent(QShowEvent* event)
 {
-    Q_UNUSED(event)
+    Q_UNUSED(event);
 
     ui_.action_ShowMainWindow->setChecked(true);
 }
@@ -498,7 +498,7 @@ void MainWindow::showEvent(QShowEvent* event)
 
 void MainWindow::hideEvent(QHideEvent* event)
 {
-    Q_UNUSED(event)
+    Q_UNUSED(event);
 
     if (!isVisible())
     {
