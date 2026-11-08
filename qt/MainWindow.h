@@ -58,7 +58,7 @@ public:
     MainWindow& operator=(MainWindow&&) = delete;
     MainWindow& operator=(MainWindow const&) = delete;
 
-    [[nodiscard]] constexpr QSystemTrayIcon& trayIcon() noexcept
+    [[nodiscard]] QSystemTrayIcon& trayIcon() noexcept
     {
         return tray_icon_;
     }
