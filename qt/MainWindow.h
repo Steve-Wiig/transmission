@@ -92,6 +92,7 @@ protected:
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dropEvent(QDropEvent* event) override;
     bool event(QEvent* e) override;
+    void closeEvent(QCloseEvent* event) override;
 
 private slots:
     void addTorrents(QStringList const& filenames);

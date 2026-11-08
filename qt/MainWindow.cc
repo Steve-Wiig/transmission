@@ -1644,6 +1644,14 @@ bool MainWindow::event(QEvent* e)
 ****
 ***/
 
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    // Ensure the Transmission session shuts down cleanly before closing.
+    // Session::stop() blocks until tr_sessionClose() completes.
+    session_.stop();
+    event->accept();
+}
+
 void MainWindow::contextMenuEvent(QContextMenuEvent* event)
 {
     ui_.menuTorrent->popup(event->globalPos());
