@@ -291,13 +291,19 @@ Session::~Session()
 
 void Session::stop()
 {
-    rpc_.stop();
+    // Run shutdown on the session thread to avoid deadlock with Qt main thread
+    run_in_session_thread([this]() {
+        rpc_.stop();
 
-    if (session_ != nullptr)
-    {
-        tr_sessionClose(session_, 5.0);
-        session_ = nullptr;
-    }
+        if (session_ != nullptr)
+        {
+            tr_sessionClose(session_, 5.0);
+            session_ = nullptr;
+        }
+
+        // Quit the Qt application from the main thread after shutdown completes
+        QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);
+    });
 }
 
 void Session::restart()
