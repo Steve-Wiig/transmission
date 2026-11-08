@@ -977,7 +977,7 @@ torrent_ids_t MainWindow::getSelectedTorrents(bool with_metadata_only) const
 
     for (QModelIndex const& index : ui_.listView->selectionModel()->selectedRows())
     {
-        auto const* tor(index.data(static_cast<int>(TorrentModel::TorrentRole)).value<Torrent const*>());
+        auto const* tor = index.data(static_cast<int>(TorrentModel::TorrentRole)).value<Torrent*>();
 
         if (tor != nullptr && (!with_metadata_only || tor->hasMetadata()))
         {
@@ -1387,7 +1387,7 @@ void MainWindow::removeTorrents(bool const delete_files)
 
     for (QModelIndex const& index : ui_.listView->selectionModel()->selectedRows())
     {
-        auto const* tor(index.data(static_cast<int>(TorrentModel::TorrentRole)).value<Torrent const*>());
+        auto const* tor = index.data(static_cast<int>(TorrentModel::TorrentRole)).value<Torrent*>();
         ids.insert(tor->id());
 
         if (tor->connectedPeers())
