@@ -544,7 +544,7 @@ void MainWindow::openPreferences()
 {
     if (trApp)
     {
-        emit trApp->showPreferences();
+        trApp->onShowPreferences();
     }
 }
 
