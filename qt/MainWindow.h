@@ -121,6 +121,7 @@ private slots:
     void toggleSpeedMode();
     void toggleWindows(bool do_show);
     void trayActivated(QSystemTrayIcon::ActivationReason reason);
+    void onSessionShutdownComplete();
 
 private:
     [[nodiscard]] torrent_ids_t getSelectedTorrents(bool with_metadata_only = false) const;
@@ -200,10 +201,13 @@ private:
     int refresh_fields_ = {};
     QTimer refresh_timer_;
 
+    bool is_shutting_down_ = false;
+
     void refreshActionSensitivity();
     void refreshIcons();
     void refreshStatusBar(TransferStats const& stats);
     void refreshTitle();
     void refreshTorrentViewHeader();
     void refreshTrayIcon(TransferStats const& stats);
+    void onSessionShutdownComplete();
 };

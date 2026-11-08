@@ -146,6 +146,7 @@ public slots:
     void refreshSessionStats();
     void removeTorrents(torrent_ids_t const& torrent_ids, bool delete_files = false);
     void updatePref(tr_quark key);
+    void stopAsync();
 
 signals:
     void sourceChanged();
@@ -160,6 +161,7 @@ signals:
     void dataSendProgress();
     void networkResponse(QNetworkReply::NetworkError code, QString const& message);
     void httpAuthenticationRequired();
+    void shutdownComplete();
 
 private slots:
     void onDuplicatesTimer();

@@ -291,7 +291,7 @@ Session::~Session()
 
 void Session::stop()
 {
-    // Run shutdown on the session thread to avoid deadlock with Qt main thread
+    // Synchronous shutdown - blocks until complete
     run_in_session_thread([this]() {
         rpc_.stop();
 
@@ -304,6 +304,26 @@ void Session::stop()
         // Quit the Qt application from the main thread after shutdown completes
         QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);
     });
+}
+
+void Session::stopAsync()
+{
+    // Asynchronous shutdown - runs in background thread, emits shutdownComplete() when done
+    std::thread([this]() {
+        // Run the libtransmission shutdown in the session thread
+        run_in_session_thread([this]() {
+            rpc_.stop();
+
+            if (session_ != nullptr)
+            {
+                tr_sessionClose(session_, 5.0);
+                session_ = nullptr;
+            }
+        });
+
+        // Emit shutdownComplete on the main thread
+        QMetaObject::invokeMethod(this, "shutdownComplete", Qt::QueuedConnection);
+    }).detach();
 }
 
 void Session::restart()

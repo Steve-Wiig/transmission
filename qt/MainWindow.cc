@@ -88,6 +88,7 @@ MainWindow::MainWindow(Session& session, Prefs& prefs, TorrentModel& model, bool
     , torrent_delegate_min_{ new TorrentDelegateMin{ this } }
     , network_timer_{ this }
     , refresh_timer_{ this }
+    , is_shutting_down_{ false }
 {
     setAcceptDrops(true);
 
@@ -135,6 +136,9 @@ MainWindow::MainWindow(Session& session, Prefs& prefs, TorrentModel& model, bool
     connect(ui_.action_SelectAll, &QAction::triggered, ui_.listView, &QAbstractItemView::selectAll);
     connect(ui_.action_DeselectAll, &QAction::triggered, ui_.listView, &QAbstractItemView::clearSelection);
     connect(ui_.action_Quit, &QAction::triggered, qApp, &QCoreApplication::quit);
+
+    // Connect session shutdown signal
+    connect(&session_, &Session::shutdownComplete, this, &MainWindow::onSessionShutdownComplete);
 
     auto refresh_action_sensitivity_soon = [this]()
     {
@@ -512,10 +516,19 @@ void MainWindow::hideEvent(QHideEvent* event)
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
-    // Ensure the Transmission session shuts down cleanly before closing.
-    // Session::stop() blocks until tr_sessionClose() completes.
-    session_.stop();
-    event->accept();
+    if (is_shutting_down_)
+    {
+        // Shutdown already complete, allow close
+        event->accept();
+        return;
+    }
+
+    // Initiate asynchronous shutdown
+    is_shutting_down_ = true;
+    event->ignore();  // Don't close yet
+
+    // Start async shutdown - will emit shutdownComplete when done
+    session_.stopAsync();
 }
 
 /****
@@ -1659,12 +1672,11 @@ bool MainWindow::event(QEvent* e)
 ****
 ***/
 
-void MainWindow::closeEvent(QCloseEvent* event)
+void MainWindow::onSessionShutdownComplete()
 {
-    // Ensure the Transmission session shuts down cleanly before closing.
-    // Session::stop() blocks until tr_sessionClose() completes.
-    session_.stop();
-    event->accept();
+    // Shutdown complete, now close the window
+    is_shutting_down_ = false;
+    close();
 }
 
 void MainWindow::contextMenuEvent(QContextMenuEvent* event)
