@@ -39,7 +39,7 @@ class Session : public QObject
     Q_OBJECT
 
 public:
-    Session(QString config_dir, Prefs& prefs, RpcClient& rpc);
+    Session(QString config_dir, Prefs& prefs, RpcClient& rpc, bool portable = false);
     Session(Session&&) = delete;
     Session(Session const&) = delete;
     Session& operator=(Session&&) = delete;
@@ -187,6 +187,7 @@ private:
     int64_t blocklist_size_ = -1;
     std::array<bool, NUM_PORT_TEST_IP_PROTOCOL> port_test_pending_ = {};
     tr_session* session_ = {};
+    bool portable_ = false;
     QStringList idle_json_;
     tr_session_stats stats_ = EmptyStats;
     tr_session_stats cumulative_stats_ = EmptyStats;
