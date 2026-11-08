@@ -262,30 +262,6 @@ void PrefsDialog::initWidget(QTimeEdit* const w, tr_quark const key)
 
 bool PrefsDialog::eventFilter(QObject* watched, QEvent* event)
 {
-    if (watched == ui_.advancedScrollArea)
-    {
-        if (event->type() == QEvent::KeyPress)
-        {
-            QKeyEvent* ke = static_cast<QKeyEvent*>(event);
-            if (ke->key() == Qt::Key_Up || ke->key() == Qt::Key_Down)
-            {
-                QWidget* fw = QApplication::focusWidget();
-                QAbstractSpinBox* spinBox = qobject_cast<QAbstractSpinBox*>(fw);
-                
-                // If focus is on the internal QLineEdit, grab the parent QSpinBox
-                if (!spinBox && fw) {
-                    spinBox = qobject_cast<QAbstractSpinBox*>(fw->parent());
-                }
-                
-                if (spinBox) {
-                    // Send directly to the SpinBox to trigger stepUp/stepDown
-                    QApplication::sendEvent(spinBox, ke);
-                    return true; // Consume event so QAbstractScrollArea doesn't scroll
-                }
-            }
-        }
-        // Wheel events: let Qt bubble them natively
-    }
     return BaseDialog::eventFilter(watched, event);
 }
 
@@ -488,10 +464,6 @@ void PrefsDialog::initNetworkTab()
 
 void PrefsDialog::initAdvancedTab()
 {
-    // Prevent scroll area from intercepting keyboard/wheel events for spin boxes
-    ui_.advancedScrollArea->setFocusPolicy(Qt::NoFocus);
-    ui_.advancedScrollArea->installEventFilter(this);
-
     // Encryption
     initEncryptionCombo(ui_.encryptionModeCombo, TR_KEY_encryption);
 
