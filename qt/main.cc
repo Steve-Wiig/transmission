@@ -357,19 +357,6 @@ int tr_main(int argc, char** argv)
             auto host_installs = tr::discover_installations();
             tr_logAddInfo("[PortableMode] Found " + std::to_string(host_installs.size()) + " host installation(s)");
 
-            // Debug: write discovery results to file
-            {
-                std::ofstream dbg(portable_root + "/discovery_debug.txt");
-                dbg << "Found " << host_installs.size() << " installations\n";
-                for (auto const& hi : host_installs) {
-                    dbg << "  config_root: " << hi.config_root << "\n";
-                    dbg << "  type: " << static_cast<int>(hi.type) << "\n";
-                    dbg << "  has_settings: " << hi.has_settings << "\n";
-                    dbg << "  has_resume_dir: " << hi.has_resume_dir << "\n";
-                    dbg << "  has_torrents_dir: " << hi.has_torrents_dir << "\n";
-                }
-            }
-
             bool imported = false;
             for (auto const& host_install : host_installs)
             {
