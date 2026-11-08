@@ -1432,7 +1432,6 @@ deflate_init_static_codes(struct libdeflate_compressor *c)
 {
 	unsigned i;
 
-	LIBDEFLATE_MEMSET(&c->freqs, 0, sizeof(c->freqs));
 	for (i = 0; i < 144; i++)
 		c->freqs.litlen[i] = 1 << (9 - 8);
 	for (; i < 256; i++)
@@ -1933,6 +1932,7 @@ deflate_flush_block(struct libdeflate_compressor *c,
 		 * Output the lengths of the codewords in the litlen and offset
 		 * codes, encoded by the precode.
 		 */
+		LIBDEFLATE_MEMSET(c->o.precode.freqs, 0, sizeof(c->o.precode.freqs));
 		i = 0;
 		do {
 			precode_item = c->o.precode.items[i];

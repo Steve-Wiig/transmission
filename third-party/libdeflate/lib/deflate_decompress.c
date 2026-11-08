@@ -894,7 +894,7 @@ build_decode_table(u32 decode_table[],
 			if (codeword == cur_table_end - 1) {
 				/* Last codeword (all 1's) */
 				for (; len < table_bits; len++) {
-					memcpy(&decode_table[cur_table_end],
+					LIBDEFLATE_MEMCPY(&decode_table[cur_table_end],
 					       decode_table,
 					       cur_table_end *
 						sizeof(decode_table[0]));
@@ -925,7 +925,7 @@ build_decode_table(u32 decode_table[],
 		/* Advance to the next codeword length. */
 		do {
 			if (++len <= table_bits) {
-				memcpy(&decode_table[cur_table_end],
+				LIBDEFLATE_MEMCPY(&decode_table[cur_table_end],
 				       decode_table,
 				       cur_table_end * sizeof(decode_table[0]));
 				cur_table_end <<= 1;
