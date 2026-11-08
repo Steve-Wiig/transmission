@@ -517,7 +517,7 @@ void MainWindow::openSession()
 
 void MainWindow::openPreferences()
 {
-    Utils::openDialog(prefs_dialog_, session_, prefs_, this);
+    emit trApp->showPreferences();
 }
 
 void MainWindow::openProperties()
