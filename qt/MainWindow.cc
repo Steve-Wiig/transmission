@@ -542,10 +542,7 @@ void MainWindow::openSession()
 
 void MainWindow::openPreferences()
 {
-    if (trApp)
-    {
-        emit trApp->showPreferences();
-    }
+    session_.openPreferences();
 }
 
 void MainWindow::openProperties()
