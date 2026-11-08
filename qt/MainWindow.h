@@ -209,5 +209,4 @@ private:
     void refreshTitle();
     void refreshTorrentViewHeader();
     void refreshTrayIcon(TransferStats const& stats);
-    void onSessionShutdownComplete();
 };

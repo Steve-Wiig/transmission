@@ -292,38 +292,43 @@ Session::~Session()
 void Session::stop()
 {
     // Synchronous shutdown - blocks until complete
-    run_in_session_thread([this]() {
+    tr_session* raw_session = session_;
+    session_ = nullptr; // Prevent double free
+
+    std::thread shutdown_thread([this, raw_session]() {
         rpc_.stop();
 
-        if (session_ != nullptr)
+        if (raw_session != nullptr)
         {
-            tr_sessionClose(session_, 5.0);
-            session_ = nullptr;
+            tr_sessionClose(raw_session, 5.0);
         }
 
         // Quit the Qt application from the main thread after shutdown completes
         QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);
     });
+    shutdown_thread.detach(); // Safe to detach since process is exiting
 }
 
 void Session::stopAsync()
 {
     // Asynchronous shutdown - runs in background thread, emits shutdownComplete() when done
-    std::thread([this]() {
-        // Run the libtransmission shutdown in the session thread
-        run_in_session_thread([this]() {
-            rpc_.stop();
+    tr_session* raw_session = session_;
+    session_ = nullptr; // Prevent double free
 
-            if (session_ != nullptr)
-            {
-                tr_sessionClose(session_, 5.0);
-                session_ = nullptr;
-            }
-        });
+    std::thread shutdown_thread([this, raw_session]() {
+        rpc_.stop();
+
+        if (raw_session != nullptr)
+        {
+            tr_sessionClose(raw_session, 5.0);
+        }
 
         // Emit shutdownComplete on the main thread
-        QMetaObject::invokeMethod(this, "shutdownComplete", Qt::QueuedConnection);
-    }).detach();
+        QMetaObject::invokeMethod(this, [this]() {
+            emit shutdownComplete();
+        }, Qt::QueuedConnection);
+    });
+    shutdown_thread.detach(); // Safe to detach since process is exiting
 }
 
 void Session::restart()
