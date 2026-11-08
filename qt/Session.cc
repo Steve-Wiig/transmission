@@ -295,7 +295,7 @@ void Session::stop()
 
     if (session_ != nullptr)
     {
-        tr_sessionClose(session_);
+        tr_sessionClose(session_, 5.0);
         session_ = nullptr;
     }
 }
@@ -346,7 +346,25 @@ void Session::start()
         // Portable mode: use the portable config directory (populated by import on first run)
         std::string config_dir = config_dir_.toStdString();
 
+        std::cout << "[Session] Loading settings from: " << config_dir << std::endl;
         auto settings = tr_sessionLoadSettings(config_dir);
+
+        // Dump settings for debugging
+        if (auto* map = settings.get_if<tr_variant::Map>(); map != nullptr) {
+            std::cout << "[Session] Settings loaded, keys: " << map->size() << std::endl;
+            if (auto it = map->find(TR_KEY_download_dir); it != map->end()) {
+                std::string_view val;
+                if (tr_variantGetStrView(&it->second, &val)) {
+                    std::cout << "[Session]   download-dir: " << val << std::endl;
+                }
+            }
+            if (auto it = map->find(TR_KEY_incomplete_dir); it != map->end()) {
+                std::string_view val;
+                if (tr_variantGetStrView(&it->second, &val)) {
+                    std::cout << "[Session]   incomplete-dir: " << val << std::endl;
+                }
+            }
+        }
 
         // Portable mode: isolate from installed host instance
         if (portable_)
