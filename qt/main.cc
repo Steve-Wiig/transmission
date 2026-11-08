@@ -6,8 +6,10 @@
 #include <array>
 #include <memory>
 #include <string_view>
+#include <filesystem>
 
 #include <QDir>
+#include <QFileInfo>
 #include <QNetworkAccessManager>
 
 #include <fmt/format.h>
@@ -17,6 +19,8 @@
 #include <libtransmission/tr-getopt.h>
 #include <libtransmission/utils.h>
 #include <libtransmission/version.h>
+#include <libtransmission/portable-discovery.h>
+#include <libtransmission/log.h>
 
 #include <libtransmission-app/app.h>
 
@@ -34,13 +38,35 @@ using namespace std::string_view_literals;
 namespace
 {
 
+#ifdef Q_OS_WIN
+QString getExeDir()
+{
+#define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+    wchar_t path[MAX_PATH];
+    DWORD len = GetModuleFileNameW(nullptr, path, MAX_PATH);
+    if (len == 0 || len == MAX_PATH)
+        return {};
+    QString exe_path = QString::fromWCharArray(path, len);
+    return QFileInfo(exe_path).absolutePath();
+}
+#else
+QString getExeDir()
+{
+    return QCoreApplication::applicationDirPath();
+}
+#endif
+
 char const* const DisplayName = "transmission-qt";
 
 auto constexpr FileArgsSeparator = "--"sv;
 auto constexpr QtArgsSeparator = "---"sv;
 
 using Arg = tr_option::Arg;
-auto constexpr Opts = std::array<tr_option, 9>{ {
+auto constexpr Opts = std::array<tr_option, 10>{ {
     {
         .val = 'g',
         .longName = "config-dir",
@@ -102,6 +128,14 @@ auto constexpr Opts = std::array<tr_option, 9>{ {
         .longName = "portable",
         .description = "Run in portable mode (store config next to executable)",
         .shortName = "P",
+        .arg = Arg::None,
+        .argName = nullptr,
+    },
+    {
+        .val = 'R',
+        .longName = "portable-reimport",
+        .description = "Force re-import from host installation in portable mode",
+        .shortName = "R",
         .arg = Arg::None,
         .argName = nullptr,
     },
@@ -175,16 +209,19 @@ int tr_main(int argc, char** argv)
     tr::app::init();
     trqt::variant_helpers::register_qt_converters();
 
+    // Enable INFO level logging early for portable mode debugging
+    tr_logSetLevel(TR_LOG_INFO);
+
     // parse the command-line arguments
     bool minimized = false;
     bool portable = false;
+    bool portable_reimport = false;
     QString host;
     QString port;
     QString username;
     QString password;
     QString config_dir;
     QStringList filenames;
-    QString portable_config_dir;
 
     int opt = 0;
     char const* arg = nullptr;
@@ -217,6 +254,10 @@ int tr_main(int argc, char** argv)
 
         case 'P':
             portable = true;
+            break;
+
+        case 'R':
+            portable_reimport = true;
             break;
 
         case 'm':
@@ -271,81 +312,167 @@ int tr_main(int argc, char** argv)
     // Handle portable mode early - before prefs initialization
     if (portable)
     {
-        std::cout << "[PortableMode] Portable mode enabled" << std::endl;
-        
-        // Compute portable config dir: <exe_dir>/data
-        portable_config_dir = QCoreApplication::applicationDirPath() + QStringLiteral("/data");
-        QDir dir(portable_config_dir);
-        if (!dir.exists())
+        tr_logAddInfo("[PortableMode] Portable mode enabled");
+
+        // Get executable directory for portable config
+        QString exe_dir = getExeDir();
+        std::string portable_root = exe_dir.toStdString();
+        std::string portable_config = portable_root + "/data";
+
+        tr_logAddInfo("[PortableMode] Portable root: " + portable_root);
+        tr_logAddInfo("[PortableMode] Portable config: " + portable_config);
+
+        // Check if portable config already exists with data
+        std::string portable_settings = portable_config + "/settings.json";
+        bool portable_exists = std::filesystem::exists(portable_settings);
+
+        // Debug: write portable check results
         {
-            dir.mkpath(portable_config_dir);
-            std::cout << "[PortableMode] Created portable config directory: " << portable_config_dir.toStdString() << std::endl;
+            std::ofstream dbg(portable_root + "/portable_check.txt");
+            dbg << "portable_config: " << portable_config << "\n";
+            dbg << "portable_settings: " << portable_settings << "\n";
+            dbg << "portable_exists: " << portable_exists << "\n";
+            dbg << "portable_reimport: " << portable_reimport << "\n";
+            dbg << "data dir exists: " << std::filesystem::exists(portable_config) << "\n";
         }
 
-        // Override config_dir with portable path
-        config_dir = portable_config_dir;
-
-        // Belt-and-braces: set TRANSMISSION_HOME for any library calls
-        qputenv("TRANSMISSION_HOME", portable_config_dir.toUtf8());
-
-        // First-run import: if no settings.json exists, discover host installs and import
-        QString portable_settings = portable_config_dir + QStringLiteral("/settings.json");
-        QFileInfo settings_info(portable_settings);
-        if (!settings_info.exists())
+        if (portable_exists && !portable_reimport)
         {
-            std::cout << "[PortableMode] First run detected - discovering host installations..." << std::endl;
-            
-            // Discover host Transmission installations
-            auto host_installs = tr::portable::discoverHostInstalls();
-            std::cout << "[PortableMode] Found " << host_installs.size() << " host installation(s)" << std::endl;
-        
-            // Try each host install until one succeeds
+            tr_logAddInfo("[PortableMode] Using existing portable config");
+            config_dir = QString::fromStdString(portable_config);
+            qputenv("TRANSMISSION_HOME", config_dir.toUtf8());
+        }
+        else
+        {
+            if (portable_reimport)
+            {
+                tr_logAddInfo("[PortableMode] Forced re-import from host installation (--portable-reimport)");
+            }
+            else
+            {
+                tr_logAddInfo("[PortableMode] No existing portable config, importing from host installation...");
+            }
+
+            // Discover host Transmission installations using core library
+            auto host_installs = tr::discover_installations();
+            tr_logAddInfo("[PortableMode] Found " + std::to_string(host_installs.size()) + " host installation(s)");
+
+            // Debug: write discovery results to file
+            {
+                std::ofstream dbg(portable_root + "/discovery_debug.txt");
+                dbg << "Found " << host_installs.size() << " installations\n";
+                for (auto const& hi : host_installs) {
+                    dbg << "  config_root: " << hi.config_root << "\n";
+                    dbg << "  type: " << static_cast<int>(hi.type) << "\n";
+                    dbg << "  has_settings: " << hi.has_settings << "\n";
+                    dbg << "  has_resume_dir: " << hi.has_resume_dir << "\n";
+                    dbg << "  has_torrents_dir: " << hi.has_torrents_dir << "\n";
+                }
+            }
+
+            bool imported = false;
             for (auto const& host_install : host_installs)
             {
-                std::cout << "[PortableMode] Trying host install: " << host_install.config_dir << " (type: " << host_install.type << ")" << std::endl;
-                
-                // Skip installs without a valid config directory
-                if (host_install.config_dir.empty() || 
-                    !tr::portable::dir_exists(host_install.config_dir))
+                tr_logAddInfo("[PortableMode] Checking host install: " + host_install.config_root + " (type: " + std::to_string(static_cast<int>(host_install.type)) + ")");
+
+                if (host_install.config_root.empty() || !std::filesystem::exists(host_install.config_root))
                 {
-                    std::cout << "[PortableMode]   Skipping - invalid config directory" << std::endl;
+                    tr_logAddInfo("[PortableMode]   Skipping - invalid config directory");
                     continue;
                 }
 
-                // Stage import from host to portable directory
-                tr::portable::ImportOptions options;
+                // Validate the host config directory has actual data
+                std::string resume_dir = host_install.config_root + "/resume";
+                std::string torrents_dir = host_install.config_root + "/torrents";
+                std::string settings_file = host_install.config_root + "/settings.json";
+                
+                bool has_settings = std::filesystem::exists(settings_file);
+                bool has_resume = false;
+                bool has_torrents = false;
+                
+                if (std::filesystem::exists(resume_dir))
+                {
+                    for (auto const& entry : std::filesystem::directory_iterator(resume_dir))
+                    {
+                        if (entry.is_regular_file() && entry.path().extension() == ".resume")
+                        {
+                            has_resume = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (std::filesystem::exists(torrents_dir))
+                {
+                    for (auto const& entry : std::filesystem::directory_iterator(torrents_dir))
+                    {
+                        if (entry.is_regular_file() && 
+                            (entry.path().extension() == ".torrent" || entry.path().extension() == ".magnet"))
+                        {
+                            has_torrents = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!has_settings || (!has_resume && !has_torrents))
+                {
+                    tr_logAddInfo("[PortableMode]   Skipping - no valid Transmission data");
+                    continue;
+                }
+
+                // Import from host installation to portable config
+                tr_logAddInfo("[PortableMode] Importing from host install...");
+
+                tr::PortableOptions options;
+                options.portable_root = portable_root;
                 options.import_settings = true;
+                options.merge_settings = portable_reimport;  // Merge host settings with local (preserves log_file, message-level)
                 options.import_resume = true;
                 options.import_torrent_files = true;
                 options.remap_drive_to_unc = true;
                 options.fail_fast = false;
 
-                // portable_root is the exe directory (parent of data/)
-                QString portable_root = QCoreApplication::applicationDirPath();
-                auto result = tr::portable::stageImport(host_install, portable_root.toUtf8().constData(), options);
+                tr::ImportResult result = tr::import_from_install(host_install, options);
 
-                // If import succeeded, remap paths in settings and resume files
                 if (result.success)
                 {
-                    std::cout << "[PortableMode] Import succeeded, remapping paths..." << std::endl;
-                    tr::portable::migrateSettings(portable_settings);
-                    tr::portable::migrateResumeFiles(portable_config_dir + QStringLiteral("/resume"));
-                    std::cout << "[PortableMode] Portable setup complete!" << std::endl;
-                    break; // Stop after first successful import
+                    tr_logAddInfo("[PortableMode] Import succeeded! Imported " + std::to_string(result.imported_torrents.size()) + " file(s)");
+                    if (!result.warnings.empty())
+                    {
+                        for (auto const& w : result.warnings)
+                            tr_logAddInfo("[PortableMode]   Warning: " + w);
+                    }
+                    if (!result.locked_files.empty())
+                    {
+                        for (auto const& l : result.locked_files)
+                            tr_logAddInfo("[PortableMode]   Locked: " + l.process_name + " (PID: " + std::to_string(l.process_id) + ")");
+                    }
+
+                    config_dir = QString::fromStdString(portable_config);
+                    qputenv("TRANSMISSION_HOME", config_dir.toUtf8());
+                    imported = true;
+                    break; // Use first valid host install
                 }
                 else
                 {
-                    std::cout << "[PortableMode] Import failed: " << result.errors.size() << " error(s)" << std::endl;
-                    for (auto const& err : result.errors) {
-                        std::cout << "[PortableMode]   Error: " << err << std::endl;
-                    }
+                    std::cout << "[PortableMode] Import failed:" << std::endl;
+                    for (auto const& e : result.errors)
+                        std::cout << "[PortableMode]   Error: " << e << std::endl;
                 }
             }
+
+            if (!imported)
+            {
+                // Fallback: create empty portable config dir next to exe
+                std::cout << "[PortableMode] No host installation imported, creating empty portable config at: " << portable_config << std::endl;
+                std::filesystem::create_directories(portable_config);
+                config_dir = QString::fromStdString(portable_config);
+                qputenv("TRANSMISSION_HOME", config_dir.toUtf8());
+            }
         }
-        else
-        {
-            std::cout << "[PortableMode] Existing portable config found, skipping import" << std::endl;
-        }
+
+        std::cout << "[PortableMode] config_dir set to: " << config_dir.toStdString() << std::endl;
     }
 
     // In portable mode, disable COM interop initialization and delegation
