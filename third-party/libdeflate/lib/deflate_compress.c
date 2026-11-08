@@ -3414,7 +3414,7 @@ deflate_find_min_cost_path(struct libdeflate_compressor *c,
 		cur_node->cost_to_end = best_cost_to_end;
 	} while (cur_node != &c->p.n.optimum_nodes[0]);
 
-	deflate_reset_symbol_frequencies(c);
+	LIBDEFLATE_MEMSET(&c->freqs, 0, sizeof(c->freqs));
 	deflate_tally_item_list(c, block_length);
 	deflate_make_huffman_codes(&c->freqs, &c->codes);
 }
