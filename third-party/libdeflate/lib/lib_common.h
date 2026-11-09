@@ -93,6 +93,19 @@ int memcmp(const void *s1, const void *s2, size_t n);
 #define LIBDEFLATE_MEMSET(s, c, n)	__builtin_memset((s), (c), (n))
 #define LIBDEFLATE_MEMCPY(dest, src, n)	__builtin_memcpy((dest), (src), (n))
 #define LIBDEFLATE_MEMMOVE(dest, src, n)	__builtin_memmove((dest), (src), (n))
+
+/* Force inline for performance-critical memory operations */
+#define LIBDEFLATE_MEMCPY_INLINE(dest, src, n)	do { \
+	__builtin_memcpy((dest), (src), (n)); \
+} while(0)
+
+#define LIBDEFLATE_MEMSET_INLINE(s, c, n)	do { \
+	__builtin_memset((s), (c), (n)); \
+} while(0)
+
+#define LIBDEFLATE_MEMMOVE_INLINE(dest, src, n)	do { \
+	__builtin_memmove((dest), (src), (n)); \
+} while(0)
 #endif
 
 /*

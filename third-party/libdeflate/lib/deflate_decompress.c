@@ -45,6 +45,25 @@
 #include "lib_common.h"
 #include "deflate_constants.h"
 
+/* Local inline wrappers for compiler builtins - reduces call overhead */
+static forceinline void
+libdeflate_memcpy_inline(void *dest, const void *src, size_t n)
+{
+	__builtin_memcpy(dest, src, n);
+}
+
+static forceinline void
+libdeflate_memset_inline(void *s, int c, size_t n)
+{
+	__builtin_memset(s, c, n);
+}
+
+static forceinline void
+libdeflate_memmove_inline(void *dest, const void *src, size_t n)
+{
+	__builtin_memmove(dest, src, n);
+}
+
 /*
  * If the expression passed to SAFETY_CHECK() evaluates to false, then the
  * decompression routine immediately returns LIBDEFLATE_BAD_DATA, indicating the

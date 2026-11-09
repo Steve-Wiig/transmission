@@ -28,6 +28,25 @@
 #include "deflate_compress.h"
 #include "deflate_constants.h"
 
+/* Local inline wrappers for compiler builtins - reduces call overhead */
+static forceinline void
+libdeflate_memcpy_inline(void *dest, const void *src, size_t n)
+{
+	__builtin_memcpy(dest, src, n);
+}
+
+static forceinline void
+libdeflate_memset_inline(void *s, int c, size_t n)
+{
+	__builtin_memset(s, c, n);
+}
+
+static forceinline void
+libdeflate_memmove_inline(void *dest, const void *src, size_t n)
+{
+	__builtin_memmove(dest, src, n);
+}
+
 /******************************************************************************/
 
 /*
@@ -1988,6 +2007,7 @@ deflate_flush_block(struct libdeflate_compressor *c,
 
 			/* Output a run of literals - use memcpy for bulk copy when possible */
 			if (CAN_BUFFER(4 * MAX_LITLEN_CODEWORD_LEN)) {
+				/* Fast path: copy 4 literals at a time using memcpy when possible */
 				for (; litrunlen >= 4; litrunlen -= 4) {
 					lit = *in_next++;
 					ADD_BITS(codes->codewords.litlen[lit],
@@ -2241,7 +2261,7 @@ should_end_block(struct block_split_stats *stats,
 
 /******************************************************************************/
 
-static void
+static forceinline void
 deflate_begin_sequences(struct libdeflate_compressor *c,
 			struct deflate_sequence *first_seq)
 {
@@ -2456,7 +2476,7 @@ deflate_compress_none(const u8 *in, size_t in_nbytes,
 		out_next += 2;
 		put_unaligned_le16(~len, out_next);
 		out_next += 2;
-		memcpy(out_next, in_next, len);
+		libdeflate_memcpy_inline(out_next, in_next, len);
 		out_next += len;
 		in_next += len;
 	} while (in_next != in_end);
