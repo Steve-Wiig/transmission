@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cstddef>
 #include <ctime>
+#include <fstream>
 #include <iterator> // for std::back_inserter
 #include <ranges>
 #include <string_view>
@@ -129,6 +130,13 @@ QVariant TorrentModel::data(QModelIndex const& index, int role) const
 
 void TorrentModel::removeTorrents(tr_variant* torrent_list)
 {
+    // Debug checkpoint
+    {
+        std::ofstream f("D:/transmission logging/transmission.log", std::ios::app);
+        f << "[TORRENT-MODEL] removeTorrents called\n";
+        f.flush();
+    }
+
     auto torrents = torrents_t{};
     torrents.reserve(tr_variantListSize(torrent_list));
 
@@ -153,6 +161,21 @@ void TorrentModel::removeTorrents(tr_variant* torrent_list)
 
 void TorrentModel::updateTorrents(tr_variant* torrent_list, bool is_complete_list)
 {
+    // Debug checkpoint - verify signal connection works
+    {
+        std::ofstream f("D:/transmission logging/transmission.log", std::ios::app);
+        size_t count = 0;
+        if (torrent_list) {
+            tr_variant* child = nullptr;
+            size_t i = 0;
+            while ((child = tr_variantListChild(torrent_list, i++))) {
+                if (is_complete_list || i > 1) count++; // table format has keys at index 0
+            }
+        }
+        f << "[TORRENT-MODEL] updateTorrents called, is_complete_list=" << is_complete_list << ", torrent_count=" << count << "\n";
+        f.flush();
+    }
+
     auto const old = is_complete_list ? torrents_ : torrents_t{};
     auto added = torrent_ids_t{};
     auto changed = torrent_ids_t{};
