@@ -94,7 +94,7 @@ void TorrentModel::clear()
 
 int TorrentModel::rowCount(QModelIndex const& parent) const
 {
-    Q_UNUSED(parent)
+    (void)parent;
 
     return static_cast<int>(torrents_.size());
 }
