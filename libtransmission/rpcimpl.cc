@@ -973,34 +973,34 @@ namespace make_torrent_field_helpers
     }
 }
 
-// Thread-local buffer to reduce allocations for torrent info
-thread_local tr_variant::Map tl_torrent_map;
-thread_local tr_variant::Vector tl_torrent_vec;
+// Thread-local buffer to reduce allocations for torrent info.
+// Uses std::variant to hold either a Map or Vector, avoiding two separate buffers.
+thread_local std::variant<tr_variant::Map, tr_variant::Vector> tl_torrent_buffer;
 
 [[nodiscard]] auto make_torrent_info_map(tr_torrent* const tor, tr_quark const* const fields, size_t const field_count)
 {
     auto const st = tr_torrentStat(tor);
-    auto& info_map = tl_torrent_map;
+    auto& info_map = tl_torrent_buffer.emplace<tr_variant::Map>();
     info_map.clear();
     info_map.reserve(field_count);
     for (size_t i = 0; i < field_count; ++i)
     {
         info_map.try_emplace(fields[i], make_torrent_field(*tor, st, fields[i]));
     }
-    return tr_variant{ info_map };  // Copy map - but avoids repeated allocations
+    return tr_variant{ std::move(info_map) };
 }
 
 [[nodiscard]] auto make_torrent_info_vec(tr_torrent* const tor, tr_quark const* const fields, size_t const field_count)
 {
     auto const st = tr_torrentStat(tor);
-    auto& info_vec = tl_torrent_vec;
+    auto& info_vec = tl_torrent_buffer.emplace<tr_variant::Vector>();
     info_vec.clear();
     info_vec.reserve(field_count);
     for (size_t i = 0; i < field_count; ++i)
     {
         info_vec.emplace_back(make_torrent_field(*tor, st, fields[i]));
     }
-    return tr_variant{ info_vec };  // Copy vector - but avoids repeated allocations
+    return tr_variant{ std::move(info_vec) };
 }
 
 [[nodiscard]] auto make_torrent_info(

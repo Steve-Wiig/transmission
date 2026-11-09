@@ -218,6 +218,8 @@ private:
     sigc::connection timer_;
     sigc::connection update_model_soon_tag_;
     sigc::connection refresh_actions_tag_;
+    Glib::RefPtr<Glib::TimeoutSource> pref_debounce_timer_;
+    std::unordered_set<tr_quark> pending_pref_keys_;
     std::unique_ptr<SystemTrayIcon> icon_;
     std::unique_ptr<MainWindow> wind_;
     Glib::RefPtr<Session> core_;
