@@ -1488,11 +1488,11 @@ namespace small {
             std::copy(char_source, char_source + n, char_destination);
         }
 
-        /// \brief Move elements to the right a construct at the new location
+        /// \brief Shift elements right and construct new elements - optimized for relocatable types
         template <
             class Construct,
             class T2 = value_type,
-            std::enable_if_t<!std::is_trivially_copyable_v<T2>, int> = 0>
+            std::enable_if_t<!is_relocatable_v<T2> || !using_std_allocator, int> = 0>
         void
         shift_right_and_construct(
             T *const first,
@@ -1508,9 +1508,7 @@ namespace small {
             T *out = new_last;
             T *in = last;
             {
-                // In case anything goes wrong
                 auto rollback = make_guard([&] {
-                    // Destroy the out/last range
                     if (out < last) {
                         out = last - 1;
                     }
@@ -1521,13 +1519,9 @@ namespace small {
 
                 // Move elements from "in" to uninitialized "out"
                 while (in != first && out > last) {
-                    // Out must be decremented before an exception can be thrown
-                    // so that the rollback guard knows where to start.
                     --out;
                     --in;
-                    if constexpr (
-                        is_relocatable_v<value_type> && using_std_allocator)
-                    {
+                    if constexpr (is_relocatable_v<value_type> && using_std_allocator) {
                         byte_copy(out, in, sizeof(value_type));
                     } else {
                         new (out) T(std::move(*in));
@@ -1538,9 +1532,7 @@ namespace small {
                 while (in != first) {
                     --out;
                     --in;
-                    if constexpr (
-                        is_relocatable_v<value_type> && using_std_allocator)
-                    {
+                    if constexpr (is_relocatable_v<value_type> && using_std_allocator) {
                         byte_copy(out, in, sizeof(value_type));
                     } else {
                         *out = std::move(*in);
@@ -1556,9 +1548,7 @@ namespace small {
                 // Construct elements in initialized "out"
                 while (out != first) {
                     --out;
-                    if constexpr (
-                        is_relocatable_v<value_type> && using_std_allocator)
-                    {
+                    if constexpr (is_relocatable_v<value_type> && using_std_allocator) {
                         new (out) T(create());
                     } else {
                         *out = create();
@@ -1569,20 +1559,22 @@ namespace small {
             }
         }
 
-        /// \brief Shirt the range [first, last] to [new_first, new_last] and
-        /// fill the range [first, new_first] with the `create` function
+        /// \brief Shift elements right and construct new elements - use memmove for relocatable types
         template <
             class Construct,
             class T2 = value_type,
-            std::enable_if_t<std::is_trivially_copyable_v<T2>, int> = 0>
+            std::enable_if_t<is_relocatable_v<T2> && using_std_allocator, int> = 0>
         void
         shift_right_and_construct(
             T *const first,
             T *const last,
             T *const new_last,
             Construct &&create) {
-            // Move elements backward from [first, last] to [new_first, new_last]
-            std::move_backward(first, last, new_last);
+            // Use memmove for relocatable types - handles overlapping correctly
+            std::memmove(
+                static_cast<void *>(first + (new_last - last)),
+                static_cast<void const *>(first),
+                (last - first) * sizeof *first);
 
             // Create elements in the range [first, new_first] backward
             const auto n_create = new_last - last;
