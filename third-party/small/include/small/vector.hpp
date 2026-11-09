@@ -1066,20 +1066,15 @@ namespace small {
             }
 
             const auto n_erase = last - first;
+            const auto n_after_erase = cend() - last;
+            
             if constexpr (is_relocatable_v<value_type> && using_std_allocator) {
-                // Move elements directly in memory
-                const auto n_after_erase = cend() - last;
-                if (n_erase >= n_after_erase) {
-                    std::memcpy(
-                        (void *) first.base(),
-                        (void *) last.base(),
-                        n_after_erase * sizeof(value_type));
-                } else {
-                    std::memmove(
-                        (void *) first.base(),
-                        (void *) last.base(),
-                        n_after_erase * sizeof(value_type));
-                }
+                // Use memmove for relocatable types - handles overlapping regions correctly
+                // and is faster than memcpy+memmove branching
+                std::memmove(
+                    (void *) first.base(),
+                    (void *) last.base(),
+                    n_after_erase * sizeof(value_type));
             } else {
                 // Move elements in memory
                 std::move(last, cend(), unconst(first));

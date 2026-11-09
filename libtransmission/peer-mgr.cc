@@ -2692,16 +2692,20 @@ void tr_peerMgr::bandwidth_pulse()
 
     auto const lock = unique_lock();
 
-    pumpAllPeers(this);
+    // Only pump peers that have active transfers or need attention
+    pumpActivePeers(this);
 
     // allocate bandwidth to the peers
     static auto constexpr Msec = std::chrono::duration_cast<std::chrono::milliseconds>(BandwidthTimerPeriod).count();
     session->top_bandwidth_.allocate(Msec);
 
-    // torrent upkeep
+    // torrent upkeep - only for torrents with active peers
     for (auto* const tor : torrents_)
     {
-        tor->do_idle_work();
+        if (tor->swarm && tor->swarm->stats.peer_count > 0)
+        {
+            tor->do_idle_work();
+        }
     }
 
     reconnect_pulse();

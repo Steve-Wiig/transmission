@@ -247,6 +247,7 @@ Torrent::ChangeFlags Torrent::Impl::update_cache()
     auto const has_seed_ratio = tr_torrentGetSeedRatio(raw_torrent_, &seed_ratio);
     auto const view = tr_torrentView(raw_torrent_);
 
+    // Only update fields that actually changed
     update_cache_value(cache_.name, Glib::ustring{ view.name }, result, ChangeFlag::NAME);
     update_cache_value(cache_.speed_up, stats.piece_upload_speed, result, ChangeFlag::SPEED_UP);
     update_cache_value(cache_.speed_down, stats.piece_download_speed, result, ChangeFlag::SPEED_DOWN);

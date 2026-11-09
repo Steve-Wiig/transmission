@@ -367,24 +367,28 @@ void TorrentModel::updateTorrents(tr_variant* torrent_list, bool is_complete_lis
         rowsEmitChanged(changed);
     }
 
-    // emit signals
+    // emit signals - only if there are connected slots
+    auto const has_torrents_added_slot = QObject::receivers(SIGNAL(torrentsAdded(const torrent_ids_t&))) > 0;
+    auto const has_torrents_need_info_slot = QObject::receivers(SIGNAL(torrentsNeedInfo(const torrent_ids_t&))) > 0;
+    auto const has_torrents_changed_slot = QObject::receivers(SIGNAL(torrentsChanged(const torrent_ids_t&, const Torrent::fields_t&))) > 0;
+    auto const has_torrents_completed_slot = QObject::receivers(SIGNAL(torrentsCompleted(const torrent_ids_t&))) > 0;
 
-    if (!added.empty())
+    if (!added.empty() && has_torrents_added_slot)
     {
         emit torrentsAdded(added);
     }
 
-    if (!needinfo.empty())
+    if (!needinfo.empty() && has_torrents_need_info_slot)
     {
         emit torrentsNeedInfo(needinfo);
     }
 
-    if (!changed.empty())
+    if (!changed.empty() && has_torrents_changed_slot)
     {
         emit torrentsChanged(changed, changed_fields);
     }
 
-    if (!completed.empty())
+    if (!completed.empty() && has_torrents_completed_slot)
     {
         emit torrentsCompleted(completed);
     }

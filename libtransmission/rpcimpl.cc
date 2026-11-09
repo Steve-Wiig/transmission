@@ -976,7 +976,8 @@ namespace make_torrent_field_helpers
 [[nodiscard]] auto make_torrent_info_map(tr_torrent* const tor, tr_quark const* const fields, size_t const field_count)
 {
     auto const st = tr_torrentStat(tor);
-    auto info_map = tr_variant::Map{ field_count };
+    auto info_map = tr_variant::Map{};
+    info_map.reserve(field_count);
     for (size_t i = 0; i < field_count; ++i)
     {
         info_map.try_emplace(fields[i], make_torrent_field(*tor, st, fields[i]));
@@ -1063,6 +1064,9 @@ namespace make_torrent_field_helpers
         std::ranges::transform(keys, std::back_inserter(names), [](tr_quark key) { return tr_quark_get_string_view(key); });
         torrents_vec.emplace_back(std::move(names));
     }
+
+    // Pre-allocate to avoid reallocations
+    torrents_vec.reserve(torrents_vec.size() + torrents.size());
 
     for (auto* const tor : torrents)
     {

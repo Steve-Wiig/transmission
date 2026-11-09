@@ -1090,6 +1090,16 @@ void tr_torrent::set_location_in_session_thread(std::string_view const path, boo
 {
     TR_ASSERT(session->am_in_session_thread());
 
+    // Quick check: if path is the same as current, nothing to do
+    if (!move_from_old_path && path == download_dir_)
+    {
+        if (setme_state != nullptr)
+        {
+            *setme_state = TR_LOC_DONE;
+        }
+        return;
+    }
+
     auto ok = true;
     if (move_from_old_path)
     {
@@ -1648,7 +1658,14 @@ void tr_torrent::update_file_path(tr_file_index_t file, std::optional<bool> has_
         tr_pathbuf{ found->base(), '/', file_subpath(file), tr_torrent_files::PartialFileSuffix } :
         tr_pathbuf{ found->base(), '/', file_subpath(file) };
 
+    // Quick check: if paths are the same, no filesystem operation needed
     if (tr_sys_path_is_same(oldpath, newpath))
+    {
+        return;
+    }
+
+    // Check if the file actually exists at oldpath before attempting rename
+    if (!tr_sys_path_exists(oldpath))
     {
         return;
     }
@@ -1831,57 +1848,60 @@ void tr_torrent::recheck_completeness()
 
     needs_completeness_check_ = false;
 
-    if (auto const new_completeness = completion_.status(); completeness_ != new_completeness)
+    auto const new_completeness = completion_.status();
+    if (completeness_ == new_completeness)
     {
-        bool const recent_change = bytes_downloaded_.during_this_session() != 0U;
-        bool const was_running = is_running();
+        return; // No change, nothing to do
+    }
 
-        if (new_completeness != TR_LEECH && was_running && session->shouldFullyVerifyCompleteTorrents())
+    bool const recent_change = bytes_downloaded_.during_this_session() != 0U;
+    bool const was_running = is_running();
+
+    if (new_completeness != TR_LEECH && was_running && session->shouldFullyVerifyCompleteTorrents())
+    {
+        tr_torrentVerify(this);
+        return;
+    }
+
+    tr_logAddTraceTor(
+        this,
+        fmt::format(
+            "State changed from {} to {}",
+            get_completion_string(completeness_),
+            get_completion_string(new_completeness)));
+
+    completeness_ = new_completeness;
+
+    if (is_done())
+    {
+        session->close_torrent_files(id());
+
+        if (recent_change)
         {
-            tr_torrentVerify(this);
-            return;
+            // https://www.bittorrent.org/beps/bep_0003.html
+            // ...and one using completed is sent when the download is complete.
+            // No completed is sent if the file was complete when started.
+            tr_announcerTorrentCompleted(this);
+        }
+        date_done_ = tr_time();
+
+        if (current_dir() == incomplete_dir())
+        {
+            set_location(download_dir(), true, nullptr);
         }
 
-        tr_logAddTraceTor(
-            this,
-            fmt::format(
-                "State changed from {} to {}",
-                get_completion_string(completeness_),
-                get_completion_string(new_completeness)));
+        done_(this, recent_change);
+    }
 
-        completeness_ = new_completeness;
+    session->onTorrentCompletenessChanged(id(), completeness_, was_running);
 
-        if (is_done())
-        {
-            session->close_torrent_files(id());
+    set_dirty();
+    mark_changed();
 
-            if (recent_change)
-            {
-                // https://www.bittorrent.org/beps/bep_0003.html
-                // ...and one using completed is sent when the download is complete.
-                // No completed is sent if the file was complete when started.
-                tr_announcerTorrentCompleted(this);
-            }
-            date_done_ = tr_time();
-
-            if (current_dir() == incomplete_dir())
-            {
-                set_location(download_dir(), true, nullptr);
-            }
-
-            done_(this, recent_change);
-        }
-
-        session->onTorrentCompletenessChanged(id(), completeness_, was_running);
-
-        set_dirty();
-        mark_changed();
-
-        if (is_done())
-        {
-            save_resume_file();
-            callScriptIfEnabled(this, TR_SCRIPT_ON_TORRENT_DONE);
-        }
+    if (is_done())
+    {
+        save_resume_file();
+        callScriptIfEnabled(this, TR_SCRIPT_ON_TORRENT_DONE);
     }
 }
 
@@ -1997,16 +2017,26 @@ tr_block_span_t tr_torrent::block_span_for_file(tr_file_index_t const file) cons
 
 void tr_torrent::set_file_priorities(tr_file_index_t const* files, tr_file_index_t file_count, tr_priority_t priority)
 {
-    if (std::ranges::any_of(
-            files,
-            files + file_count,
-            [this, priority](tr_file_index_t file) { return priority != file_priorities_.file_priority(file); }))
+    // Quick check: see if any file's priority actually changes
+    bool any_changed = false;
+    for (tr_file_index_t i = 0; i < file_count; ++i)
     {
-        file_priorities_.set(files, file_count, priority);
-        priority_changed_(this, files, file_count, priority);
-        set_dirty();
-        mark_changed();
+        if (priority != file_priorities_.file_priority(files[i]))
+        {
+            any_changed = true;
+            break;
+        }
     }
+
+    if (!any_changed)
+    {
+        return; // Nothing changed
+    }
+
+    file_priorities_.set(files, file_count, priority);
+    priority_changed_(this, files, file_count, priority);
+    set_dirty();
+    mark_changed();
 }
 
 // ---
@@ -2564,8 +2594,14 @@ void tr_torrent::mark_changed()
     }
 
     bool const checked = check_piece(piece);
-    mark_changed();
-    set_dirty();
+    
+    // Only mark changed/dirty if the piece check result actually matters
+    // (i.e., we found a piece we didn't know we had, or lost a piece we thought we had)
+    if (checked != has_piece(piece))
+    {
+        mark_changed();
+        set_dirty();
+    }
 
     checked_pieces_.set(piece, checked);
     return checked;

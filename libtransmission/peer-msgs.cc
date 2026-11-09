@@ -2032,8 +2032,14 @@ void tr_peerMsgsImpl::pulse()
     auto const now_msec = tr_time_msec();
 
     check_request_timeout(now_sec);
-    update_desired_request_count();
-    maybe_send_block_requests();
+        
+    // Only update desired request count if peer state might have changed
+    if (client_is_interested() && !client_is_choked() && tor_.client_can_download())
+    {
+        update_desired_request_count();
+        maybe_send_block_requests();
+    }
+        
     maybe_send_metadata_requests(now_sec);
     fill_output_buffer(now_sec, now_msec);
 }
@@ -2112,25 +2118,32 @@ void tr_peerMsgsImpl::check_request_timeout(time_t const now)
 {
     auto n_bytes_written = size_t{};
 
-    // fulfill metadata requests
-    for (;;)
+    // Quick check: if no pending requests and no metadata requests, skip loop overhead
+    if (!peer_requested_.empty())
     {
-        auto const old_len = n_bytes_written;
-        n_bytes_written += add_next_metadata_piece();
-        if (old_len == n_bytes_written)
+        // fulfill piece requests
+        for (;;)
         {
-            break;
+            auto const old_len = n_bytes_written;
+            n_bytes_written += add_next_block(now_sec, now_msec);
+            if (old_len == n_bytes_written)
+            {
+                break;
+            }
         }
     }
 
-    // fulfill piece requests
-    for (;;)
+    if (!peer_requested_metadata_pieces_.empty())
     {
-        auto const old_len = n_bytes_written;
-        n_bytes_written += add_next_block(now_sec, now_msec);
-        if (old_len == n_bytes_written)
+        // fulfill metadata requests
+        for (;;)
         {
-            break;
+            auto const old_len = n_bytes_written;
+            n_bytes_written += add_next_metadata_piece();
+            if (old_len == n_bytes_written)
+            {
+                break;
+            }
         }
     }
 
@@ -2171,6 +2184,7 @@ void tr_peerMsgsImpl::check_request_timeout(time_t const now)
 
 [[nodiscard]] size_t tr_peerMsgsImpl::add_next_block(time_t now_sec, uint64_t now_msec)
 {
+    // Quick pre-checks before doing any work
     if (std::empty(peer_requested_) || io_->get_write_buffer_space(now_msec) == 0U)
     {
         return {};
@@ -2179,27 +2193,33 @@ void tr_peerMsgsImpl::check_request_timeout(time_t const now)
     auto const req = peer_requested_.front();
     peer_requested_.pop_front();
 
-    auto buf = std::array<uint8_t, tr_block_info::BlockSize>{};
-    auto ok = is_valid_request(req) && tor_.has_piece(req.index);
-
-    if (ok)
+    // Fast path: validate request and check piece availability
+    if (!is_valid_request(req) || !tor_.has_piece(req.index))
     {
-        ok = tor_.ensure_piece_is_checked(req.index);
-
-        if (!ok)
+        if (io_->supports_fext())
         {
-            tor_.error().set_local_error(fmt::format("Please Verify Local Data! Piece #{:d} is corrupt.", req.index));
+            return protocol_send_reject(req);
         }
+        return {};
     }
 
-    if (ok)
+    // Check piece verification - this is the expensive operation
+    if (!tor_.ensure_piece_is_checked(req.index))
     {
-        ok = tr_ioRead(
-                 tor_,
-                 session->openFiles(),
-                 tor_.piece_loc(req.index, req.offset),
-                 std::span{ std::data(buf), req.length }) == 0;
+        tor_.error().set_local_error(fmt::format("Please Verify Local Data! Piece #{:d} is corrupt.", req.index));
+        if (io_->supports_fext())
+        {
+            return protocol_send_reject(req);
+        }
+        return {};
     }
+
+    auto buf = std::array<uint8_t, tr_block_info::BlockSize>{};
+    auto const ok = tr_ioRead(
+             tor_,
+             session->openFiles(),
+             tor_.piece_loc(req.index, req.offset),
+             std::span{ std::data(buf), req.length }) == 0;
 
     if (ok)
     {
