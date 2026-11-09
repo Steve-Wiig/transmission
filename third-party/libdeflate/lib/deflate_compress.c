@@ -1986,7 +1986,7 @@ deflate_flush_block(struct libdeflate_compressor *c,
 				     SEQ_LENGTH_SHIFT;
 			unsigned lit;
 
-			/* Output a run of literals. */
+			/* Output a run of literals - use memcpy for bulk copy when possible */
 			if (CAN_BUFFER(4 * MAX_LITLEN_CODEWORD_LEN)) {
 				for (; litrunlen >= 4; litrunlen -= 4) {
 					lit = *in_next++;
@@ -4070,6 +4070,9 @@ libdeflate_deflate_compress(struct libdeflate_compressor *c,
 	os.next = out;
 	os.end = os.next + out_nbytes_avail;
 	os.overflow = false;
+
+	/* Prefetch input for better cache utilization */
+	__builtin_prefetch(in, 0, 3);
 
 	/* Call the actual compression function. */
 	(*c->impl)(c, in, in_nbytes, &os);

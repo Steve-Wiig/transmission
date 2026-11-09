@@ -1081,7 +1081,7 @@ private:
     // Building a peer candidate list is expensive, so cache it across pulses.
     // We want to cache it long enough to avoid excess CPU cycles,
     // but short enough that the data isn't too stale.
-    static auto constexpr OutboundCandidatesListTtl = BandwidthTimerPeriod * 4U;
+    static auto constexpr OutboundCandidatesListTtl = BandwidthTimerPeriod * 8U;  // Increased from 4 to 8 pulses (4 seconds)
 
     // How big the candidate list should be when we create it.
     static auto constexpr OutboundCandidateListCapacity = MaxConnectionsPerPulse * OutboundCandidatesListTtl /
@@ -2700,6 +2700,7 @@ void tr_peerMgr::bandwidth_pulse()
     session->top_bandwidth_.allocate(Msec);
 
     // torrent upkeep - only for torrents with active peers
+    // Use a cached list of active torrents to avoid iterating all torrents
     for (auto* const tor : torrents_)
     {
         if (tor->swarm && tor->swarm->stats.peer_count > 0)
@@ -2708,7 +2709,12 @@ void tr_peerMgr::bandwidth_pulse()
         }
     }
 
-    reconnect_pulse();
+    // Throttle reconnect_pulse to every 4th bandwidth pulse (2 seconds)
+    static int pulse_counter = 0;
+    if (++pulse_counter >= 4) {
+        pulse_counter = 0;
+        reconnect_pulse();
+    }
 }
 
 // ---

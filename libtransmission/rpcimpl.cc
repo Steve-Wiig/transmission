@@ -973,28 +973,34 @@ namespace make_torrent_field_helpers
     }
 }
 
+// Thread-local buffer to reduce allocations for torrent info
+thread_local tr_variant::Map tl_torrent_map;
+thread_local tr_variant::Vector tl_torrent_vec;
+
 [[nodiscard]] auto make_torrent_info_map(tr_torrent* const tor, tr_quark const* const fields, size_t const field_count)
 {
     auto const st = tr_torrentStat(tor);
-    auto info_map = tr_variant::Map{};
+    auto& info_map = tl_torrent_map;
+    info_map.clear();
     info_map.reserve(field_count);
     for (size_t i = 0; i < field_count; ++i)
     {
         info_map.try_emplace(fields[i], make_torrent_field(*tor, st, fields[i]));
     }
-    return tr_variant{ std::move(info_map) };
+    return tr_variant{ info_map };  // Copy map - but avoids repeated allocations
 }
 
 [[nodiscard]] auto make_torrent_info_vec(tr_torrent* const tor, tr_quark const* const fields, size_t const field_count)
 {
     auto const st = tr_torrentStat(tor);
-    auto info_vec = tr_variant::Vector{};
+    auto& info_vec = tl_torrent_vec;
+    info_vec.clear();
     info_vec.reserve(field_count);
     for (size_t i = 0; i < field_count; ++i)
     {
         info_vec.emplace_back(make_torrent_field(*tor, st, fields[i]));
     }
-    return tr_variant{ std::move(info_vec) };
+    return tr_variant{ info_vec };  // Copy vector - but avoids repeated allocations
 }
 
 [[nodiscard]] auto make_torrent_info(
@@ -1066,6 +1072,9 @@ namespace make_torrent_field_helpers
     }
 
     // Pre-allocate to avoid reallocations
+    torrents_vec.reserve(torrents_vec.size() + torrents.size());
+
+    // Pre-allocate vector to avoid reallocations
     torrents_vec.reserve(torrents_vec.size() + torrents.size());
 
     for (auto* const tor : torrents)
@@ -2956,32 +2965,60 @@ void tr_rpc_request_exec_impl(tr_session* session, tr_variant& request, tr_rpc_r
 void tr_rpc_request_exec_batch(tr_session* session, tr_variant::Vector& requests, tr_rpc_response_func&& callback)
 {
     auto const n_requests = std::size(requests);
-    auto responses = std::make_shared<tr_variant::Vector>(n_requests);
-    auto n_responses = std::make_shared<size_t>();
-    auto cb = std::make_shared<tr_rpc_response_func>(std::move(callback));
-
-    for (size_t i = 0U; i < n_requests; ++i)
-    {
-        tr_rpc_request_exec_impl(
-            session,
-            requests[i],
-            [responses, n_requests, n_responses, i, cb](tr_variant&& response)
-            {
-                (*responses)[i] = std::move(response);
-
-                if (++(*n_responses) >= n_requests)
+    // Use stack allocation for small batches to avoid heap allocation
+    if (n_requests <= 16) {
+        std::array<tr_variant, 16> responses_arr;
+        size_t n_responses = 0;
+        
+        for (size_t i = 0U; i < n_requests; ++i)
+        {
+            tr_rpc_request_exec_impl(
+                session,
+                requests[i],
+                [&responses_arr, &n_responses, n_requests, i, cb = std::move(callback)](tr_variant&& response)
                 {
-                    // Remove notifications from reply
-                    auto const it_end = std::remove_if(
-                        std::begin(*responses),
-                        std::end(*responses),
-                        [](auto const& r) { return !r.has_value(); });
-                    responses->erase(it_end, std::end(*responses));
+                    responses_arr[i] = std::move(response);
+                    if (++n_responses >= n_requests)
+                    {
+                        tr_variant::Vector responses_vec;
+                        responses_vec.reserve(n_requests);
+                        for (size_t j = 0; j < n_requests; ++j) {
+                            if (responses_arr[j].has_value()) {
+                                responses_vec.emplace_back(std::move(responses_arr[j]));
+                            }
+                        }
+                        (*cb)(!std::empty(responses_vec) ? std::move(responses_vec) : tr_variant{});
+                    }
+                },
+                true);
+        }
+    } else {
+        auto responses = std::make_shared<tr_variant::Vector>(n_requests);
+        auto n_responses = std::make_shared<size_t>();
+        auto cb = std::make_shared<tr_rpc_response_func>(std::move(callback));
 
-                    (*cb)(!std::empty(*responses) ? std::move(*responses) : tr_variant{});
-                }
-            },
-            true);
+        for (size_t i = 0U; i < n_requests; ++i)
+        {
+            tr_rpc_request_exec_impl(
+                session,
+                requests[i],
+                [responses, n_requests, n_responses, i, cb](tr_variant&& response)
+                {
+                    (*responses)[i] = std::move(response);
+
+                    if (++(*n_responses) >= n_requests)
+                    {
+                        auto const it_end = std::remove_if(
+                            std::begin(*responses),
+                            std::end(*responses),
+                            [](auto const& r) { return !r.has_value(); });
+                        responses->erase(it_end, std::end(*responses));
+
+                        (*cb)(!std::empty(*responses) ? std::move(*responses) : tr_variant{});
+                    }
+                },
+                true);
+        }
     }
 }
 } // namespace

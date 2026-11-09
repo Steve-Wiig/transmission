@@ -186,6 +186,11 @@ namespace small {
             = std::is_trivially_copyable_v<value_type>
               && sizeof(inline_storage_type) <= cache_line_size / 2;
 
+        /// \brief True if type can be relocated via memcpy (trivially relocatable)
+        static constexpr bool is_relocatable_v = std::is_trivially_copyable_v<value_type> ||
+            (std::is_trivially_move_constructible_v<value_type> && 
+             std::is_trivially_destructible_v<value_type>);
+
         /// \brief True if we are using the std::allocator
         static constexpr bool using_std_allocator = std::
             is_same<allocator_type, std::allocator<value_type>>::value;
@@ -203,6 +208,10 @@ namespace small {
         /// If type is relocatable, we just use memcpy
         static constexpr bool relocate_use_memcpy = is_relocatable_v<T>
                                                     && using_std_allocator;
+
+        /// \brief Use memcpy for relocation (move construction + destruction)
+        static constexpr bool relocate_use_memcpy_v2 = is_relocatable_v &&
+            using_std_allocator;
 
     public:
         /// \section Rule of five constructors
@@ -1383,22 +1392,19 @@ namespace small {
         }
 
         /// \brief Move the range first/last to uninitialized memory starting at
-        /// out
+        /// out - optimized for relocatable types
         template <
             class T2 = value_type,
-            std::enable_if_t<!std::is_trivially_copyable_v<T2>, int> = 0>
+            std::enable_if_t<!is_relocatable_v<T2> || !using_std_allocator, int> = 0>
         void
         move_to_uninitialized(T *first, T *last, T *out) {
             std::size_t idx = 0;
             {
-                // Call destructor for all elements we emplaced correctly if
-                // something fails
                 auto rollback = make_guard([&] {
                     for (std::size_t i = 0; i < idx; ++i) {
                         out[i].~T();
                     }
                 });
-                // Move elements
                 for (; first != last; ++first, ++idx) {
                     new (&out[idx]) T(std::move(*first));
                 }
@@ -1407,14 +1413,14 @@ namespace small {
         }
 
         /// \brief Move the range first/last to uninitialized memory starting at
-        /// out
+        /// out - use memcpy for relocatable types
         template <
             class T2 = value_type,
-            std::enable_if_t<std::is_trivially_copyable_v<T2>, int> = 0>
+            std::enable_if_t<is_relocatable_v<T2> && using_std_allocator, int> = 0>
         void
         move_to_uninitialized(T *first, T *last, T *out) {
-            // Just memmove all the data
-            std::memmove(
+            // Use memcpy for trivially relocatable types with std allocator
+            std::memcpy(
                 static_cast<void *>(out),
                 static_cast<void const *>(first),
                 (last - first) * sizeof *first);

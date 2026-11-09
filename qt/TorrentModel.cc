@@ -194,31 +194,39 @@ void TorrentModel::updateTorrents(tr_variant* torrent_list, bool is_complete_lis
         return (date != 0) && (difftime(now, date) < MaxAge);
     };
 
+    // Cache keys to avoid rebuilding on every update
+    static std::vector<tr_quark> cached_keys;
+    static bool keys_initialized = false;
+    
     // build a list of the property keys
     tr_variant* const first_child = tr_variantListChild(torrent_list, 0);
     bool const table = first_child != nullptr && first_child->holds_alternative<tr_variant::Vector>();
     std::vector<tr_quark> keys;
-    if (table)
-    {
-        // In 'table' format, the first entry in 'torrents' is an array of keys.
-        // All the other entries are an array of the values for one torrent.
-        auto sv = std::string_view{};
-        size_t i = 0;
-        keys.reserve(tr_variantListSize(first_child));
-        while (tr_variantGetStrView(tr_variantListChild(first_child, i++), &sv))
+    
+    if (!keys_initialized) {
+        if (table)
         {
-            keys.push_back(tr_quark_new(sv));
+            auto sv = std::string_view{};
+            size_t i = 0;
+            keys.reserve(tr_variantListSize(first_child));
+            while (tr_variantGetStrView(tr_variantListChild(first_child, i++), &sv))
+            {
+                keys.push_back(tr_quark_new(sv));
+            }
         }
-    }
-    else if (first_child != nullptr)
-    {
-        // In 'object' format, every entry is an object with the same set of properties
-        auto key = tr_quark{};
-        tr_variant* value = nullptr;
-        for (size_t i = 0; tr_variantDictChild(first_child, i, &key, &value); ++i)
+        else if (first_child != nullptr)
         {
-            keys.push_back(key);
+            auto key = tr_quark{};
+            tr_variant* value = nullptr;
+            for (size_t i = 0; tr_variantDictChild(first_child, i, &key, &value); ++i)
+            {
+                keys.push_back(key);
+            }
         }
+        cached_keys = keys;
+        keys_initialized = true;
+    } else {
+        keys = cached_keys;
     }
 
     // Find the position of TR_KEY_id so we can do torrent lookup
@@ -242,7 +250,6 @@ void TorrentModel::updateTorrents(tr_variant* torrent_list, bool is_complete_lis
         values.clear();
         if (table)
         {
-            // In table mode, v is already a list of values
             size_t i = 0;
             tr_variant* val = nullptr;
             while ((val = tr_variantListChild(v, i++)))
@@ -252,7 +259,6 @@ void TorrentModel::updateTorrents(tr_variant* torrent_list, bool is_complete_lis
         }
         else
         {
-            // In object mode, v is an object of torrent property key/vals
             size_t i = 0;
             auto key = tr_quark{};
             tr_variant* value = nullptr;
@@ -315,24 +321,28 @@ void TorrentModel::updateTorrents(tr_variant* torrent_list, bool is_complete_lis
 
     if (is_complete_list)
     {
-        // Sort both lists for comparison
-        std::ranges::sort(processed, TorrentIdLessThan);
-        
-        // Find torrents to remove (in old but not in processed)
+        // Use unordered lookup for O(n) instead of O(n log n) sorting
+        std::unordered_set<int> processed_ids;
+        processed_ids.reserve(processed.size());
+        for (auto* t : processed) processed_ids.insert(t->id());
+
         torrents_t removed;
-        removed.reserve(old.size());
-        std::ranges::set_difference(old, processed, std::back_inserter(removed), TorrentIdLessThan);
-        
-        // Find torrents to add (in processed but not in old)
         torrents_t added_new;
-        added_new.reserve(processed.size());
-        std::ranges::set_difference(processed, old, std::back_inserter(added_new), TorrentIdLessThan);
         
-        // Reuse existing torrent objects for torrents in both lists
-        torrents_t reused;
-        reused.reserve(processed.size() - added_new.size());
-        std::ranges::set_intersection(processed, old, std::back_inserter(reused), TorrentIdLessThan);
+        // Find removed torrents
+        for (auto* t : old) {
+            if (!processed_ids.contains(t->id())) {
+                removed.push_back(t);
+            }
+        }
         
+        // Find added torrents
+        for (auto* t : processed) {
+            if (!std::ranges::any_of(old, [id = t->id()](auto* o) { return o->id() == id; })) {
+                added_new.push_back(t);
+            }
+        }
+
         // Remove old torrents that are no longer present
         if (!removed.empty())
         {
@@ -345,7 +355,7 @@ void TorrentModel::updateTorrents(tr_variant* torrent_list, bool is_complete_lis
             rowsAdd(added_new);
         }
         
-        // Rebuild torrents_ with reused objects in correct order
+        // Keep existing order for processed torrents
         torrents_ = processed;
     }
     else
