@@ -311,11 +311,50 @@ void TorrentModel::updateTorrents(tr_variant* torrent_list, bool is_complete_lis
         processed.push_back(tor);
     }
 
-    // model upkeep
+    // model upkeep - reuse existing torrents when possible
 
-    if (!instantiated.empty())
+    if (is_complete_list)
     {
-        rowsAdd(instantiated);
+        // Sort both lists for comparison
+        std::ranges::sort(processed, TorrentIdLessThan);
+        
+        // Find torrents to remove (in old but not in processed)
+        torrents_t removed;
+        removed.reserve(old.size());
+        std::ranges::set_difference(old, processed, std::back_inserter(removed), TorrentIdLessThan);
+        
+        // Find torrents to add (in processed but not in old)
+        torrents_t added_new;
+        added_new.reserve(processed.size());
+        std::ranges::set_difference(processed, old, std::back_inserter(added_new), TorrentIdLessThan);
+        
+        // Reuse existing torrent objects for torrents in both lists
+        torrents_t reused;
+        reused.reserve(processed.size() - added_new.size());
+        std::ranges::set_intersection(processed, old, std::back_inserter(reused), TorrentIdLessThan);
+        
+        // Remove old torrents that are no longer present
+        if (!removed.empty())
+        {
+            rowsRemove(removed);
+        }
+        
+        // Add only truly new torrents
+        if (!added_new.empty())
+        {
+            rowsAdd(added_new);
+        }
+        
+        // Rebuild torrents_ with reused objects in correct order
+        torrents_ = processed;
+    }
+    else
+    {
+        // Incremental update: add any newly instantiated torrents
+        if (!instantiated.empty())
+        {
+            rowsAdd(instantiated);
+        }
     }
 
     if (!edited.empty())
@@ -348,17 +387,6 @@ void TorrentModel::updateTorrents(tr_variant* torrent_list, bool is_complete_lis
     if (!completed.empty())
     {
         emit torrentsCompleted(completed);
-    }
-
-    // model upkeep
-
-    if (is_complete_list)
-    {
-        std::ranges::sort(processed, TorrentIdLessThan);
-        torrents_t removed;
-        removed.reserve(old.size());
-        std::ranges::set_difference(old, processed, std::back_inserter(removed), TorrentIdLessThan);
-        rowsRemove(removed);
     }
 }
 
