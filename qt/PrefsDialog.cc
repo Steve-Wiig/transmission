@@ -572,7 +572,7 @@ void PrefsDialog::initDownloadingTab()
     ui_.incompleteDirButton->setMode(PathButton::DirectoryMode);
     ui_.doneDownloadingScriptButton->setMode(PathButton::FileMode);
     ui_.doneSeedingScriptButton->setMode(PathButton::FileMode);
-    ui_.logFileButton->setMode(PathButton::FileOrNewMode);
+    ui_.logFileButton->setMode(PathButton::FileMode);
 
     ui_.watchDirButton->setTitle(tr("Select Watch Directory"));
     ui_.downloadDirButton->setTitle(tr("Select Destination"));

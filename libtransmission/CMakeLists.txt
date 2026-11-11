@@ -304,6 +304,7 @@ target_link_libraries(${TR_NAME}
         MadlerCrcany
         $<$<BOOL:${WIN32}>:crypt32>
         $<$<BOOL:${WIN32}>:shlwapi>
+        $<$<BOOL:${WIN32}>:rstrtmgr>
         "$<$<BOOL:${APPLE}>:-framework Foundation>"
         $<$<BOOL:${ANDROID}>:${log-lib}>
         $<$<BOOL:${HAVE_LIBATOMIC}>:atomic>

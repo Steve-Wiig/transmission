@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.20)
 
 project(Transmission VERSION 4.0.0 LANGUAGES C CXX)
 
@@ -8,7 +8,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # Disable tests and optional subprojects for minimal build
 set(ENABLE_UTILS OFF CACHE BOOL "" FORCE)
-set(ENABLE_QT OFF CACHE BOOL "" FORCE)
+set(ENABLE_QT ON CACHE BOOL "" FORCE)
 
 # Set MSYS2 MinGW64 root for finding system libraries
 set(MSYS2_MINGW64_ROOT "C:/msys64/mingw64")
@@ -197,3 +197,13 @@ endif()
 add_subdirectory(libtransmission)
 add_subdirectory(libtransmission-app)
 add_subdirectory(daemon)
+# Qt6 detection and qt_impl target
+if(ENABLE_QT)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets Network Core)
+    if(NOT TARGET transmission::qt_impl)
+        add_library(transmission::qt_impl INTERFACE IMPORTED)
+        target_link_libraries(transmission::qt_impl INTERFACE Qt6::Widgets Qt6::Network Qt6::Core)
+    endif()
+endif()
+add_subdirectory(qt)
+

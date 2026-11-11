@@ -359,7 +359,7 @@ private:
         int type;
     };
 
-    static auto constexpr Items = std::array<PrefItem, 94>{ {
+    static auto constexpr Items = std::array<PrefItem, 95>{ {
         { .key = TR_KEY_show_options_window, .type = QMetaType::Bool },
         { .key = TR_KEY_open_dialog_dir, .type = QMetaType::QString },
         { .key = TR_KEY_inhibit_desktop_hibernation, .type = QMetaType::Bool },

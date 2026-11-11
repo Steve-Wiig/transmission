@@ -268,6 +268,8 @@ if(MSVC)
     tr_append_target_property(${TR_NAME}-qt LINK_FLAGS "/ENTRY:mainCRTStartup")
 endif()
 
+set(SOURCE_ICONS_DIR "${CMAKE_SOURCE_DIR}/icons")
+
 tr_win32_app_info(${TR_NAME}-qt
     "Transmission Qt Client"
     "${TR_NAME}-qt"
