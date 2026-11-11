@@ -266,6 +266,9 @@ MainWindow::MainWindow(Session& session, Prefs& prefs, TorrentModel& model, bool
     connect(&network_timer_, &QTimer::timeout, this, &MainWindow::updateNetworkLabel);
     connect(&refresh_timer_, &QTimer::timeout, this, &MainWindow::onRefreshTimer);
 
+    shutdown_watchdog_.setSingleShot(true);
+    connect(&shutdown_watchdog_, &QTimer::timeout, this, &MainWindow::onSessionShutdownComplete);
+
     refreshSoon(~0);
 }
 
@@ -518,16 +521,16 @@ void MainWindow::closeEvent(QCloseEvent* event)
 {
     if (is_shutting_down_)
     {
-        // Shutdown already complete, allow close
-        event->accept();
+        event->ignore();
         return;
     }
 
-    // Initiate asynchronous shutdown
     is_shutting_down_ = true;
-    event->ignore();  // Don't close yet
-
-    // Start async shutdown - will emit shutdownComplete when done
+    event->ignore();
+    refresh_timer_.stop();
+    network_timer_.stop();
+    hide();
+    shutdown_watchdog_.start(ShutdownWatchdogTimeoutMs);
     session_.stopAsync();
 }
 
@@ -1674,9 +1677,14 @@ bool MainWindow::event(QEvent* e)
 
 void MainWindow::onSessionShutdownComplete()
 {
-    // Shutdown complete, now close the window
-    is_shutting_down_ = false;
-    close();
+    if (shutdown_quit_called_)
+    {
+        return;
+    }
+    shutdown_quit_called_ = true;
+    shutdown_watchdog_.stop();
+    qInfo() << "Shutdown complete";
+    qApp->quit();
 }
 
 void MainWindow::contextMenuEvent(QContextMenuEvent* event)

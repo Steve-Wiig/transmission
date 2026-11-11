@@ -203,7 +203,9 @@ private:
     QTimer refresh_timer_;
 
     // --- Shutdown sequence (Fix 2, 3, 4) ---
-    QTimer* shutdown_watchdog_ = nullptr;
+    QTimer shutdown_watchdog_{ this };
+    bool shutdown_quit_called_ = false;
+    static constexpr int ShutdownWatchdogTimeoutMs = 30000;
     bool is_shutting_down_ = false;
 
     void refreshActionSensitivity();
