@@ -9,8 +9,11 @@
 #include <filesystem>
 
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QNetworkAccessManager>
+#include <QStandardPaths>
+#include <cstdio>
 
 #include <fmt/format.h>
 
@@ -204,8 +207,21 @@ bool tryDelegate(QStringList const& filenames)
 
 } // namespace
 
+static void trqMessageHandler(QtMsgType type, QMessageLogContext const&, QString const& msg)
+{
+    static QFile f{ QDir{ QStandardPaths::writableLocation(QStandardPaths::TempLocation) }.filePath("trq-debug.log") };
+    if (!f.isOpen()) { f.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text); }
+    if (f.isOpen()) {
+        f.write(msg.toUtf8());
+        f.write("\n");
+        f.flush();
+    }
+    fprintf(stderr, "%s\n", qUtf8Printable(msg));
+}
+
 int tr_main(int argc, char** argv)
 {
+    qInstallMessageHandler(trqMessageHandler);
     tr::app::init();
     trqt::variant_helpers::register_qt_converters();
 
@@ -413,9 +429,9 @@ int tr_main(int argc, char** argv)
 
                 tr::PortableOptions options;
                 options.portable_root = portable_root;
-                options.import_settings = true;
-                options.merge_settings = portable_reimport;  // Merge host settings with local (preserves log_file, message-level)
+                                options.import_settings = true;
                 options.import_resume = true;
+                options.remap_drive_to_unc = true;
                 options.import_torrent_files = true;
                 options.remap_drive_to_unc = true;
                 options.fail_fast = false;
