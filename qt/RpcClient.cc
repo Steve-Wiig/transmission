@@ -104,6 +104,7 @@ void RpcClient::start(QUrl const& url)
 
 RpcResponseFuture RpcClient::exec(tr_quark const method, tr_variant* args)
 {
+    qInfo() << "[TRQ] RpcClient::exec" << tr_quark_get_string_view(method);
     auto [req, id] = buildRequest(method, args);
 
     auto promise = QFutureInterface<RpcResponse>{};
