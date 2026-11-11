@@ -35,6 +35,7 @@
 #include "MainWindow.h"
 #include "OptionsDialog.h"
 #include "Prefs.h"
+#include "PrefsDialog.h"
 #include "QtCompat.h"
 #include "Session.h"
 #include "TorrentModel.h"
@@ -192,7 +193,6 @@ Application::Application(
     connect(session_.get(), &Session::torrentsRemoved, model_.get(), &TorrentModel::removeTorrents);
     connect(session_.get(), &Session::torrentsUpdated, model_.get(), &TorrentModel::updateTorrents);
     connect(watch_dir_.get(), &WatchDir::torrentFileAdded, this, qOverload<QString const&>(&Application::addWatchdirTorrent));
-    connect(this, &Application::showPreferences, this, &Application::showPreferences);
 
     // init from preferences
     for (auto const key : { TR_KEY_watch_dir })
@@ -493,7 +493,7 @@ void Application::raise() const
 
 void Application::showPreferences() const
 {
-    auto* dialog = new PrefsDialog{ prefs_, *session_, window_.get() };
+    auto* dialog = new PrefsDialog{ *session_, prefs_, window_.get() };
     dialog->show();
 }
 

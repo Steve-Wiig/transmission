@@ -123,7 +123,6 @@ private slots:
     void toggleWindows(bool do_show);
     void trayActivated(QSystemTrayIcon::ActivationReason reason);
     void onSessionShutdownComplete();
-    void onDuplicateTorrentFound(QString const& hash);
 
 private:
     [[nodiscard]] torrent_ids_t getSelectedTorrents(bool with_metadata_only = false) const;
