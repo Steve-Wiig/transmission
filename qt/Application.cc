@@ -143,6 +143,7 @@ Application::Application(
     Prefs& prefs,
     RpcClient& rpc,
     bool minimized,
+    bool enable_interop,
     QString const& config_dir,
     QStringList const& filenames,
     int& argc,
@@ -238,7 +239,10 @@ Application::Application(
         addTorrent(AddData{ filename });
     }
 
-    InteropHelper::registerObject(this);
+    if (enable_interop)
+    {
+        InteropHelper::registerObject(this);
+    }
 
 #ifdef QT_DBUS_LIB
     if (auto bus = QDBusConnection::sessionBus(); bus.isConnected())
