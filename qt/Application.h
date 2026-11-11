@@ -43,6 +43,7 @@ public:
         Prefs& prefs,
         RpcClient& rpc,
         bool minimized,
+        bool enable_interop,
         QString const& config_dir,
         QStringList const& filenames,
         int& argc,
