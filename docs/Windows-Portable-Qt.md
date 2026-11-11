@@ -10,7 +10,7 @@ Run scripts/build-portable.ps1. It configures the repository's existing CMake Qt
 
 Create an empty portable.dat beside transmission-qt.exe or launch with --portable. The executable directory becomes the portable root. On Windows the application looks for %APPDATA%\\Transmission and copies settings.json, resume/, and torrents/ into the portable root.
 
-Import is one-way and non-destructive: a destination file that already exists is never overwritten. Existing files in the portable profile remain authoritative on later launches. Stop the official client before the first import so that settings and resume data are a consistent snapshot. The portable client does not write to the official profile.
+Import is one-way and non-destructive: a destination file that already exists is never overwritten. A `.portable-import-complete` marker records a successful initial import, so newly added official torrents are not silently imported on later launches. If an import is interrupted, missing files are retried on the next launch. Stop the official client before the first import so that settings and resume data are a consistent snapshot. The portable client does not write to the official profile.
 
 The marker can contain a line `config-dir=relative-or-absolute-path`. Relative paths are resolved against the executable directory. `-g` / `--config-dir` takes precedence over the marker path. Portable mode remains isolated even when this override is supplied. Without either marker or flag, normal Transmission configuration discovery is unchanged.
 
