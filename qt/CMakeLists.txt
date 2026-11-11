@@ -68,6 +68,8 @@ target_sources(${TR_NAME}-qt-lib
         PathButton.h
         Prefs.cc
         Prefs.h
+        portable-discovery.cc
+        portable-discovery.h
         PrefsDialog.cc
         PrefsDialog.h
         QtCompat.h
