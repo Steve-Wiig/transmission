@@ -203,8 +203,8 @@ private:
     int refresh_fields_ = {};
     QTimer refresh_timer_;
 
+    // --- Shutdown sequence (Fix 2, 3, 4) ---
     QTimer* shutdown_watchdog_ = nullptr;
-
     bool is_shutting_down_ = false;
 
     void refreshActionSensitivity();
