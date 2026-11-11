@@ -1024,7 +1024,7 @@ ImportResult import_from_install(
             {
                 bool settings_imported = false;
 
-                if (options.merge_settings && file_exists(dst_settings))
+                if (options.import_settings && file_exists(dst_settings))
                 {
                     // Merge host settings with local portable settings, preserving local overrides
                     settings_imported = mergeSettings(src_settings, dst_settings);

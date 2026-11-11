@@ -2693,7 +2693,7 @@ void tr_peerMgr::bandwidth_pulse()
     auto const lock = unique_lock();
 
     // Only pump peers that have active transfers or need attention
-    pumpActivePeers(this);
+    pumpAllPeers(this);
 
     // allocate bandwidth to the peers
     static auto constexpr Msec = std::chrono::duration_cast<std::chrono::milliseconds>(BandwidthTimerPeriod).count();

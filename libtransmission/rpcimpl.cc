@@ -981,7 +981,6 @@ thread_local std::variant<tr_variant::Map, tr_variant::Vector> tl_torrent_buffer
 {
     auto const st = tr_torrentStat(tor);
     auto& info_map = tl_torrent_buffer.emplace<tr_variant::Map>();
-    info_map.clear();
     info_map.reserve(field_count);
     for (size_t i = 0; i < field_count; ++i)
     {
@@ -2987,7 +2986,7 @@ void tr_rpc_request_exec_batch(tr_session* session, tr_variant::Vector& requests
                                 responses_vec.emplace_back(std::move(responses_arr[j]));
                             }
                         }
-                        (*cb)(!std::empty(responses_vec) ? std::move(responses_vec) : tr_variant{});
+                        cb(!std::empty(responses_vec) ? std::move(responses_vec) : tr_variant{});
                     }
                 },
                 true);
