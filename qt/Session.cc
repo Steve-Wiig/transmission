@@ -292,7 +292,6 @@ Session::~Session()
 
 void Session::stop()
 {
-    qInfo() << "[TRQ] Session::stop, session=" << session_;
     rpc_.stop();
 
     if (session_ != nullptr)
@@ -304,7 +303,6 @@ void Session::stop()
 
 void Session::stopAsync()
 {
-    qInfo() << "[TRQ] Session::stopAsync, session=" << session_;
     rpc_.stop();
 
     auto* const s = std::exchange(session_, nullptr);
@@ -337,7 +335,6 @@ void Session::restart()
 
 void Session::start()
 {
-    qInfo() << "[TRQ] Session::start begin, remote=" << prefs_.get<bool>(TR_KEY_remote_session_enabled);
     std::cout << "[Session] Starting session..." << std::endl;
     std::cout << "[Session]   Config dir: " << config_dir_.toStdString() << std::endl;
     std::cout << "[Session]   Portable mode: " << (portable_ ? "yes" : "no") << std::endl;
@@ -412,14 +409,12 @@ void Session::start()
 
         std::cout << "[Session] Initializing libtransmission session..." << std::endl;
         session_ = tr_sessionInit(config_dir, true, settings);
-        qInfo() << "[TRQ] sessionInit returned" << session_;
 
         rpc_.start(session_);
 
         auto* const ctor = tr_ctorNew(session_);
         size_t n_torrents = tr_sessionLoadTorrents(session_, ctor);
         tr_ctorFree(ctor);
-        qInfo() << "[TRQ] sessionLoadTorrents returned" << n_torrents;
         
         std::cout << "[Session] Loaded " << n_torrents << " torrent(s)" << std::endl;
     }
@@ -728,7 +723,6 @@ using TorrentProperties = Session::TorrentProperties;
 
 void Session::refreshTorrents(torrent_ids_t const& torrent_ids, TorrentProperties const props)
 {
-    qInfo() << "[TRQ] refreshTorrents ids=" << torrent_ids.size();
     auto fields = tr_variant::Vector{};
     auto const keys = getKeys(props);
     fields.reserve(std::size(keys));
@@ -777,14 +771,13 @@ void Session::refreshExtraStats(torrent_ids_t const& ids)
 
 void Session::sendTorrentRequest(tr_quark const method, torrent_ids_t const& torrent_ids)
 {
-    qInfo() << "[TRQ] sendTorrentRequest method=" << tr_quark_get_string_view(method) << "ids=" << torrent_ids.size();
     tr_variant args;
     tr_variantInitDict(&args, 1);
     addOptionalIds(&args, torrent_ids);
 
     auto* q = new RpcQueue{};
 
-    q->add([this, method, &args]() { qInfo() << "[TRQ] queue step1 executing"; return exec(method, &args); });
+    q->add([this, method, &args]() { return exec(method, &args); });
 
     q->add([this, torrent_ids]() { refreshTorrents(torrent_ids, TorrentProperties::MainStats); });
 
@@ -890,7 +883,6 @@ void Session::updateBlocklist()
 
 RpcResponseFuture Session::exec(tr_quark method, tr_variant* args)
 {
-    qInfo() << "[TRQ] Session::exec" << tr_quark_get_string_view(method);
     return rpc_.exec(method, args);
 }
 
