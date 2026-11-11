@@ -186,11 +186,6 @@ namespace small {
             = std::is_trivially_copyable_v<value_type>
               && sizeof(inline_storage_type) <= cache_line_size / 2;
 
-        /// \brief True if type can be relocated via memcpy (trivially relocatable)
-        static constexpr bool is_relocatable_v = std::is_trivially_copyable_v<value_type> ||
-            (std::is_trivially_move_constructible_v<value_type> && 
-             std::is_trivially_destructible_v<value_type>);
-
         /// \brief True if we are using the std::allocator
         static constexpr bool using_std_allocator = std::
             is_same<allocator_type, std::allocator<value_type>>::value;
@@ -208,10 +203,6 @@ namespace small {
         /// If type is relocatable, we just use memcpy
         static constexpr bool relocate_use_memcpy = is_relocatable_v<T>
                                                     && using_std_allocator;
-
-        /// \brief Use memcpy for relocation (move construction + destruction)
-        static constexpr bool relocate_use_memcpy_v2 = is_relocatable_v &&
-            using_std_allocator;
 
     public:
         /// \section Rule of five constructors
