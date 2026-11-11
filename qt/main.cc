@@ -23,6 +23,7 @@
 #include "Application.h"
 #include "InteropHelper.h"
 #include "Prefs.h"
+#include "portable-discovery.h"
 #include "RpcClient.h"
 #include "VariantHelpers.h"
 
@@ -37,7 +38,7 @@ auto constexpr FileArgsSeparator = "--"sv;
 auto constexpr QtArgsSeparator = "---"sv;
 
 using Arg = tr_option::Arg;
-auto constexpr Opts = std::array<tr_option, 8>{ {
+auto constexpr Opts = std::array<tr_option, 9>{ {
     {
         .val = 'g',
         .longName = "config-dir",
@@ -45,6 +46,14 @@ auto constexpr Opts = std::array<tr_option, 8>{ {
         .shortName = "g",
         .arg = Arg::Required,
         .argName = "<path>",
+    },
+    {
+        .val = 'P',
+        .longName = "portable",
+        .description = "Use an isolated portable configuration directory",
+        .shortName = nullptr,
+        .arg = Arg::None,
+        .argName = nullptr,
     },
     {
         .val = 'm',
@@ -166,6 +175,7 @@ int tr_main(int argc, char** argv)
 
     // parse the command-line arguments
     bool minimized = false;
+    bool portable_mode = false;
     QString host;
     QString port;
     QString username;
@@ -200,6 +210,10 @@ int tr_main(int argc, char** argv)
 
         case 'w':
             password = QString::fromUtf8(arg);
+            break;
+
+        case 'P':
+            portable_mode = true;
             break;
 
         case 'm':
@@ -247,13 +261,21 @@ int tr_main(int argc, char** argv)
         }
     }
 
-    InteropHelper::initialize();
-
-    // try to delegate the work to an existing copy of Transmission
-    // before starting ourselves...
-    if (tryDelegate(filenames))
+    auto const portable_config = trqt::portable::resolve(QString::fromLocal8Bit(argv[0]), config_dir, portable_mode);
+    portable_mode = portable_config.enabled;
+    if (portable_mode)
     {
-        return 0;
+        config_dir = portable_config.directory;
+    }
+
+    // Portable builds must not delegate to, or register as, the official client.
+    if (!portable_mode)
+    {
+        InteropHelper::initialize();
+        if (tryDelegate(filenames))
+        {
+            return 0;
+        }
     }
 
     // set the fallback config dir
@@ -311,7 +333,7 @@ int tr_main(int argc, char** argv)
     auto qt_argc = static_cast<int>(std::size(qt_argv));
     auto nam = QNetworkAccessManager{};
     auto rpc = RpcClient{ nam };
-    auto const app = Application{ prefs, rpc, minimized, config_dir, filenames, qt_argc, std::data(qt_argv) };
+    auto const app = Application{ prefs, rpc, minimized, !portable_mode, config_dir, filenames, qt_argc, std::data(qt_argv) };
     auto const ret = QApplication::exec();
 
     // save prefs before exiting
