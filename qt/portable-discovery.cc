@@ -197,7 +197,7 @@ void importOfficialConfig(QString const& official_directory, QString const& port
         }
         else
         {
-            marker.write("Imported from official Transmission config.\\n");
+            marker.write("Imported from official Transmission config.\n");
         }
     }
 }
