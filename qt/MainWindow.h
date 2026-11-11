@@ -31,6 +31,7 @@ class QMenu;
 class AboutDialog;
 class AddData;
 class DetailsDialog;
+class FilterBar;
 class ListViewProxyStyle;
 class Prefs;
 class PrefsDialog;
@@ -122,6 +123,7 @@ private slots:
     void toggleWindows(bool do_show);
     void trayActivated(QSystemTrayIcon::ActivationReason reason);
     void onSessionShutdownComplete();
+    void onDuplicateTorrentFound(QString const& hash);
 
 private:
     [[nodiscard]] torrent_ids_t getSelectedTorrents(bool with_metadata_only = false) const;
@@ -175,7 +177,7 @@ private:
     QAction* ratio_off_action_ = {};
     QAction* ratio_on_action_ = {};
     QWidgetList hidden_;
-    QWidget* filter_bar_ = {};
+    FilterBar* filter_bar_ = {};
     QAction* alt_speed_action_ = {};
     QString error_message_;
     bool auto_add_clipboard_links_ = {};
@@ -200,6 +202,8 @@ private:
     static constexpr auto RefreshIcon = 1 << 5;
     int refresh_fields_ = {};
     QTimer refresh_timer_;
+
+    QTimer* shutdown_watchdog_ = nullptr;
 
     bool is_shutting_down_ = false;
 
