@@ -19,6 +19,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QMessageBox>
+#include <QPointer>
 #include <QStyle>
 #include <QTextStream>
 #include <QtDebug>
@@ -302,24 +303,28 @@ void Session::stop()
 
 void Session::stopAsync()
 {
-    // Asynchronous shutdown - runs in background thread, emits shutdownComplete() when done
-    tr_session* raw_session = session_;
-    session_ = nullptr; // Prevent double free
+    rpc_.stop();
 
-    std::thread shutdown_thread([this, raw_session]() {
-        rpc_.stop();
+    auto* const s = std::exchange(session_, nullptr);
 
-        if (raw_session != nullptr)
-        {
-            tr_sessionClose(raw_session, 5.0);
-        }
+    if (s == nullptr)
+    {
+        emit shutdownComplete();
+        return;
+    }
 
-        // Emit shutdownComplete on the main thread
-        QMetaObject::invokeMethod(this, [this]() {
-            emit shutdownComplete();
-        }, Qt::QueuedConnection);
-    });
-    shutdown_thread.detach(); // Safe to detach since process is exiting
+    std::thread([s, guard = QPointer<Session>{this}] {
+        tr_sessionClose(s, 15.0);
+        QMetaObject::invokeMethod(
+            qApp,
+            [guard] {
+                if (!guard.isNull())
+                {
+                    emit guard->shutdownComplete();
+                }
+            },
+            Qt::QueuedConnection);
+    }).detach();
 }
 
 void Session::restart()
