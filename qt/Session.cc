@@ -291,22 +291,13 @@ Session::~Session()
 
 void Session::stop()
 {
-    // Synchronous shutdown - blocks until complete
-    tr_session* raw_session = session_;
-    session_ = nullptr; // Prevent double free
+    rpc_.stop();
 
-    std::thread shutdown_thread([this, raw_session]() {
-        rpc_.stop();
-
-        if (raw_session != nullptr)
-        {
-            tr_sessionClose(raw_session, 5.0);
-        }
-
-        // Quit the Qt application from the main thread after shutdown completes
-        QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);
-    });
-    shutdown_thread.detach(); // Safe to detach since process is exiting
+    if (session_ != nullptr)
+    {
+        tr_sessionClose(session_, 5.0);
+        session_ = nullptr;
+    }
 }
 
 void Session::stopAsync()
