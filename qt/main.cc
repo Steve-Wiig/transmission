@@ -414,7 +414,6 @@ int tr_main(int argc, char** argv)
                 tr::PortableOptions options;
                 options.portable_root = portable_root;
                 options.import_settings = true;
-                options.merge_settings = portable_reimport;  // Merge host settings with local (preserves log_file, message-level)
                 options.import_resume = true;
                 options.import_torrent_files = true;
                 options.remap_drive_to_unc = true;
