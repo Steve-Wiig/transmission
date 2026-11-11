@@ -342,6 +342,7 @@ enum // NOLINT(performance-enum-size)
     TR_KEY_max_peers_kebab_APICOMPAT,
     TR_KEY_max_connected_peers_camel_APICOMPAT,
     TR_KEY_max_connected_peers,
+    TR_KEY_max_open_files,
     TR_KEY_max_peers,
     TR_KEY_memory_bytes_kebab_APICOMPAT,
     TR_KEY_memory_units_kebab_APICOMPAT,
@@ -612,8 +613,6 @@ enum // NOLINT(performance-enum-size)
     TR_KEY_size_when_done,
     TR_KEY_sleep_per_seconds_during_verify_kebab_APICOMPAT,
     TR_KEY_sleep_per_seconds_during_verify,
-    TR_KEY_max_open_files,
-    TR_KEY_write_flush_threshold,
     TR_KEY_socket_address,
     TR_KEY_sort_mode_kebab_APICOMPAT,
     TR_KEY_sort_reversed_kebab_APICOMPAT,
@@ -754,6 +753,7 @@ enum // NOLINT(performance-enum-size)
     TR_KEY_webseeds_sending_to_us_camel_APICOMPAT,
     TR_KEY_webseeds_ex,
     TR_KEY_webseeds_sending_to_us,
+    TR_KEY_write_flush_threshold,
     TR_KEY_yourip,
     TR_N_KEYS
 };
