@@ -69,7 +69,6 @@ RpcClient::RpcClient(QNetworkAccessManager& nam, QObject* parent)
 
 void RpcClient::stop()
 {
-    qInfo() << "[TRQ] RpcClient::stop";
     auto pending = std::move(local_requests_);
     local_requests_.clear();
 
@@ -105,8 +104,7 @@ void RpcClient::start(QUrl const& url)
 
 RpcResponseFuture RpcClient::exec(tr_quark const method, tr_variant* args)
 {
-    qInfo() << "[TRQ] RpcClient::exec" << tr_quark_get_string_view(method)
-            << "session=" << session_ << "url=" << url_;
+    qInfo() << "[TRQ] RpcClient::exec" << tr_quark_get_string_view(method);
     auto [req, id] = buildRequest(method, args);
 
     auto promise = QFutureInterface<RpcResponse>{};
@@ -175,7 +173,6 @@ void RpcClient::sendNetworkRequest(QByteArray const& body, QFutureInterface<RpcR
 
 void RpcClient::sendLocalRequest(tr_variant& req, QFutureInterface<RpcResponse> const& promise, int64_t const id)
 {
-    qInfo() << "[TRQ] sendLocalRequest id=" << id;
     if (verbose_)
     {
         fmt::print("{:s}:{:d} sending req:\n{:s}\n", __FILE__, __LINE__, tr_variant_serde::json().to_string(req));
@@ -310,7 +307,6 @@ void RpcClient::networkRequestFinished(QNetworkReply* reply)
 // NOLINTNEXTLINE(performance-unnecessary-value-param): DO NOT make the parameter a reference as this method is called from another thread
 void RpcClient::localRequestFinished(TrVariantPtr response)
 {
-    qInfo() << "[TRQ] localRequestFinished";
     if (auto node = local_requests_.extract(parseResponseId(*response)))
     {
         auto const result = parseResponseData(*response);

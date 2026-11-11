@@ -1006,7 +1006,6 @@ torrent_ids_t MainWindow::getSelectedTorrents(bool with_metadata_only) const
 
 void MainWindow::startSelected()
 {
-    qInfo() << "[TRQ] startSelected n=" << getSelectedTorrents().size();
     session_.startTorrents(getSelectedTorrents());
 }
 
@@ -1017,7 +1016,6 @@ void MainWindow::startSelectedNow()
 
 void MainWindow::pauseSelected()
 {
-    qInfo() << "[TRQ] pauseSelected n=" << getSelectedTorrents().size();
     session_.pauseTorrents(getSelectedTorrents());
 }
 
@@ -1053,7 +1051,6 @@ void MainWindow::pauseAll()
 
 void MainWindow::removeSelected()
 {
-    qInfo() << "[TRQ] removeSelected n=" << getSelectedTorrents().size();
     removeTorrents(false);
 }
 
