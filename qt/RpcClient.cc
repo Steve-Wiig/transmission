@@ -23,6 +23,8 @@
 #include <libtransmission/transmission.h>
 #include <libtransmission/version.h> // LONG_VERSION_STRING
 
+#include <QDebug>
+
 #include "QtCompat.h"
 #include "VariantHelpers.h"
 
@@ -67,12 +69,25 @@ RpcClient::RpcClient(QNetworkAccessManager& nam, QObject* parent)
 
 void RpcClient::stop()
 {
+    auto pending = std::move(local_requests_);
+    local_requests_.clear();
+
     session_ = nullptr;
     session_id_.clear();
     url_.clear();
     network_style_ = tr::api_compat::default_style();
 
     QObject::disconnect(nam_, nullptr, this, nullptr);
+
+    for (auto& [id, promise] : pending)
+    {
+        auto result = RpcResponse{};
+        result.success = false;
+        result.errmsg = QStringLiteral("session stopped");
+        promise.setProgressRange(0, 1);
+        promise.setProgressValue(1);
+        promise.reportFinished(&result);
+    }
 }
 
 void RpcClient::start(tr_session* session)
@@ -107,6 +122,15 @@ RpcResponseFuture RpcClient::exec(tr_quark const method, tr_variant* args)
         auto const json = tr_variant_serde::json().compact().to_string(req);
         auto const body = QByteArray::fromStdString(json);
         sendNetworkRequest(body, promise);
+    }
+    else
+    {
+        qWarning() << "RpcClient::exec: no backend for method" << tr_quark_get_string_view(method);
+        auto result = RpcResponse{};
+        result.success = false;
+        result.errmsg = QStringLiteral("no session backend");
+        promise.setProgressValue(1);
+        promise.reportFinished(&result);
     }
 
     return promise.future();
