@@ -9,6 +9,7 @@
 #include <span>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <fmt/format.h>
 
@@ -88,7 +89,7 @@ bool preallocate_file_full(tr_sys_file_t fd, uint64_t length, tr_error* error)
 
     if (!tr_error_is_enospc(local_error.code()))
     {
-        auto buf = std::array<uint8_t, 4096>{};
+        auto buf = std::vector<uint8_t>(1024U * 1024U, 0U); // 1 MiB heap buffer: fewer SMB round-trips than 4 KiB stack writes
         bool success = true;
 
         local_error = {};

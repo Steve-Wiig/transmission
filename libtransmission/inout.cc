@@ -10,6 +10,7 @@
 #include <optional>
 #include <span>
 #include <string_view>
+#include <vector>
 
 #include <fmt/format.h>
 
@@ -240,31 +241,30 @@ std::optional<tr_sha1_digest_t> recalculate_hash(tr_torrent const& tor, tr_piece
     TR_ASSERT(piece < tor.piece_count());
 
     auto sha = tr_sha1{};
-    auto buffer = std::array<uint8_t, tr_block_info::BlockSize>{};
     auto& open_files = tor.session->openFiles();
-
     auto const [begin_byte, end_byte] = tor.block_info().byte_span_for_piece(piece);
-    auto const [begin_block, end_block] = tor.block_span_for_piece(piece);
+
+    // Read the piece's byte span directly in large chunks instead of one
+    // 16 KiB block per tr_ioRead call. tr_ioRead splits at file boundaries
+    // internally, so no block-straddling math is needed. Hash input is
+    // byte-for-byte identical to the old block loop; SMB round-trips drop
+    // by up to 64x per piece on WiFi/NAS storage.
+    static constexpr size_t ReadSize = 1024U * 1024U; // 1 MiB cap
+    auto buffer = std::vector<uint8_t>(static_cast<size_t>(std::min<uint64_t>(ReadSize, end_byte - begin_byte)));
     [[maybe_unused]] auto n_bytes_checked = size_t{};
-    for (auto block = begin_block; block < end_block; ++block)
+
+    for (auto byte = begin_byte; byte < end_byte;)
     {
-        auto const block_loc = tor.block_loc(block);
-        auto const block_len = tor.block_size(block);
-        auto contents = std::span{ std::data(buffer), block_len };
-        if (auto const success = tr_ioRead(tor, open_files, block_loc, contents) == 0; !success)
+        auto const n_this_pass = std::min<uint64_t>(std::size(buffer), end_byte - byte);
+        auto const contents = std::span{ std::data(buffer), static_cast<size_t>(n_this_pass) };
+        if (tr_ioRead(tor, open_files, tor.byte_loc(byte), contents) != 0)
         {
             return {};
         }
 
-        // Handle edge cases where blocks aren't perfectly aligned on piece boundaries.
-        // `std::max` ensures we don't start hashing before the piece begins (for the first block).
-        // `std::min` ensures we don't hash past the end of the piece (for the last block).
-        auto const start = std::max(begin_byte, block_loc.byte);
-        auto const end = std::min(end_byte, block_loc.byte + block_len);
-        auto const piece_data = contents.subspan(start - block_loc.byte, static_cast<size_t>(end - start));
-
-        sha.add(std::data(piece_data), std::size(piece_data));
-        n_bytes_checked += std::size(piece_data);
+        sha.add(std::data(contents), std::size(contents));
+        n_bytes_checked += std::size(contents);
+        byte += n_this_pass;
     }
 
     TR_ASSERT(tor.piece_size(piece) == n_bytes_checked);
