@@ -92,11 +92,11 @@ public:
         ++n_tasks_;
     }
 
-    void task_finished(bool success)
+    void task_finished(bool success, long status)
     {
         if (!success)
         {
-            task_failed();
+            task_failed(status);
         }
 
         TR_ASSERT(n_tasks_ > 0);
@@ -137,17 +137,26 @@ private:
         return n_consecutive_failures_ > 0 ? 1 : MaxConnections;
     }
 
-    void task_failed()
+    void task_failed(long status)
     {
         TR_ASSERT(n_tasks_ > 0);
 
+        // Transient server/network conditions get a short linear backoff
+        // instead of the full penalty box. 0 = curl connect failure/timeout.
+        bool const retryable = status == 0 || status == 408 || status == 429 ||
+            status == 500 || status == 502 || status == 503 || status == 504;
+
         if (++n_consecutive_failures_ >= MaxConsecutiveFailures)
         {
-            paused_until_ = tr_time() + TimeoutIntervalSecs;
+            auto const delay = retryable ?
+                std::min(TimeoutIntervalSecs, RetryableBackoffSecs * static_cast<time_t>(n_consecutive_failures_)) :
+                TimeoutIntervalSecs;
+            paused_until_ = tr_time() + delay;
         }
     }
 
     static auto constexpr TimeoutIntervalSecs = time_t{ 120 };
+    static auto constexpr RetryableBackoffSecs = time_t{ 15 };
     static auto constexpr MaxConnections = size_t{ 4 };
     static auto constexpr MaxConsecutiveFailures = MaxConnections;
 
@@ -437,7 +446,7 @@ void tr_webseed_task::on_partial_data_fetched(tr_web::FetchResponse const& web_r
     }
 
     auto* const webseed = task->webseed_;
-    webseed->connection_limiter.task_finished(success);
+    webseed->connection_limiter.task_finished(success, status);
 
     if (!success)
     {
