@@ -752,7 +752,12 @@ void Session::refreshTorrents(torrent_ids_t const& torrent_ids, TorrentPropertie
 
             if (tr_variantDictFindList(r.args.get(), TR_KEY_removed, &torrents))
             {
-                emit torrentsRemoved(torrents);
+                // Only emit removals if the list actually contains IDs.
+                // Empty removed lists are normal for recently-active incremental queries.
+                if (tr_variantListSize(torrents) > 0)
+                {
+                    emit torrentsRemoved(torrents);
+                }
             }
         });
 

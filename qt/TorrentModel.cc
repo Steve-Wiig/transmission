@@ -176,6 +176,12 @@ void TorrentModel::updateTorrents(tr_variant* torrent_list, bool is_complete_lis
         f.flush();
     }
 
+        // Guard: empty incremental update means "nothing changed", not "all removed"
+    if (!is_complete_list && tr_variantListSize(torrent_list) <= 1)
+    {
+        return;
+    }
+
     auto const old = is_complete_list ? torrents_ : torrents_t{};
     auto added = torrent_ids_t{};
     auto changed = torrent_ids_t{};
@@ -194,39 +200,29 @@ void TorrentModel::updateTorrents(tr_variant* torrent_list, bool is_complete_lis
         return (date != 0) && (difftime(now, date) < MaxAge);
     };
 
-    // Cache keys to avoid rebuilding on every update
-    static std::vector<tr_quark> cached_keys;
-    static bool keys_initialized = false;
-    
-    // build a list of the property keys
+    // build a list of the property keys from the response
     tr_variant* const first_child = tr_variantListChild(torrent_list, 0);
     bool const table = first_child != nullptr && first_child->holds_alternative<tr_variant::Vector>();
     std::vector<tr_quark> keys;
-    
-    if (!keys_initialized) {
-        if (table)
+
+    if (table)
+    {
+        auto sv = std::string_view{};
+        size_t i = 0;
+        keys.reserve(tr_variantListSize(first_child));
+        while (tr_variantGetStrView(tr_variantListChild(first_child, i++), &sv))
         {
-            auto sv = std::string_view{};
-            size_t i = 0;
-            keys.reserve(tr_variantListSize(first_child));
-            while (tr_variantGetStrView(tr_variantListChild(first_child, i++), &sv))
-            {
-                keys.push_back(tr_quark_new(sv));
-            }
+            keys.push_back(tr_quark_new(sv));
         }
-        else if (first_child != nullptr)
+    }
+    else if (first_child != nullptr)
+    {
+        auto key = tr_quark{};
+        tr_variant* value = nullptr;
+        for (size_t i = 0; tr_variantDictChild(first_child, i, &key, &value); ++i)
         {
-            auto key = tr_quark{};
-            tr_variant* value = nullptr;
-            for (size_t i = 0; tr_variantDictChild(first_child, i, &key, &value); ++i)
-            {
-                keys.push_back(key);
-            }
+            keys.push_back(key);
         }
-        cached_keys = keys;
-        keys_initialized = true;
-    } else {
-        keys = cached_keys;
     }
 
     // Find the position of TR_KEY_id so we can do torrent lookup
