@@ -175,8 +175,25 @@ std::string native_path_to_path(std::wstring_view wide_path)
     tr_error* error)
 {
     tr_sys_file_t ret = TR_BAD_SYS_FILE;
+    auto const wide_path = path_to_native_path(path);
+    if (std::empty(wide_path))
+    {
+        return ret;
+    }
 
-    if (auto const wide_path = path_to_native_path(path); !std::empty(wide_path))
+    // Check if this is a UNC path (extended-length UNC prefix: \\?\UNC\)
+    bool const is_unc = wide_path.size() >= 8 &&
+                        wide_path[0] == L'\\' && wide_path[1] == L'\\' &&
+                        wide_path[2] == L'?' && wide_path[3] == L'\\' &&
+                        wide_path[4] == L'U' && wide_path[5] == L'N' &&
+                        wide_path[6] == L'C' && wide_path[7] == L'\\';
+
+    // Retry configuration for UNC paths (NAS/SMB resilience)
+    constexpr int kMaxRetries = 5;
+    constexpr int kRetryDelaysMs[kMaxRetries] = { 1000, 2000, 4000, 8000, 30000 };
+    int attempt = 0;
+
+    for (;;)
     {
         ret = CreateFileW(
             wide_path.c_str(),
@@ -186,14 +203,37 @@ std::string native_path_to_path(std::wstring_view wide_path)
             disposition,
             flags,
             nullptr);
-    }
 
-    if (ret == TR_BAD_SYS_FILE)
-    {
-        set_system_error(error, GetLastError());
-    }
+        if (ret != TR_BAD_SYS_FILE)
+        {
+            return ret;
+        }
 
-    return ret;
+        DWORD const error_code = GetLastError();
+
+        // For UNC paths, retry with exponential backoff on transient network errors
+        if (is_unc && attempt < kMaxRetries &&
+            (error_code == ERROR_NETWORK_UNREACHABLE ||
+             error_code == ERROR_BAD_NETPATH ||
+             error_code == ERROR_NETNAME_DELETED ||
+             error_code == ERROR_RETRY ||
+             error_code == ERROR_SHARING_VIOLATION ||
+             error_code == ERROR_LOCK_VIOLATION ||
+             error_code == ERROR_BUSY ||
+             error_code == ERROR_PATH_NOT_FOUND))
+        {
+            int const delay_ms = kRetryDelaysMs[attempt];
+            tr_logAddWarn(fmt::format(
+                "open_file: UNC path unavailable (attempt {}/{}): {}, retrying in {}ms",
+                attempt + 1, kMaxRetries, tr_win32_format_message(error_code), delay_ms));
+            Sleep(delay_ms);
+            ++attempt;
+            continue;
+        }
+
+        set_system_error(error, error_code);
+        return TR_BAD_SYS_FILE;
+    }
 }
 
 [[nodiscard]] bool create_dir(

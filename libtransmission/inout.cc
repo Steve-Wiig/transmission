@@ -32,6 +32,33 @@ using namespace std::literals;
 namespace
 {
 
+#ifdef _WIN32
+// Windows error codes for transient SMB/CIFS network drops.
+// Defined as raw integers to avoid #include <windows.h> MinGW64 include-order warnings.
+constexpr int kWinErrorNetnameDeleted = 64;
+constexpr int kWinErrorNetworkUnreachable = 1231;
+constexpr int kWinErrorUnexpNetErr = 59;
+constexpr int kWinErrorBadNetpath = 53;
+constexpr int kWinErrorSharingViolation = 32;
+constexpr int kWinErrorLockViolation = 33;
+
+[[nodiscard]] bool is_stale_network_error(int code) noexcept
+{
+    return code == kWinErrorNetnameDeleted ||
+           code == kWinErrorNetworkUnreachable ||
+           code == kWinErrorUnexpNetErr ||
+           code == kWinErrorBadNetpath ||
+           code == kWinErrorSharingViolation ||
+           code == kWinErrorLockViolation;
+}
+#else
+// POSIX error codes for stale NFS/network mounts
+[[nodiscard]] bool is_stale_network_error(int code) noexcept
+{
+    return code == ESTALE || code == ENOLINK || code == ENETDOWN || code == ENETUNREACH;
+}
+#endif
+
 bool read_entire_buf(tr_sys_file_t const fd, uint64_t file_offset, std::span<uint8_t> buf, tr_error& error)
 {
     while (!std::empty(buf))
@@ -148,6 +175,12 @@ void read_bytes(
 
     if (error)
     {
+        if (is_stale_network_error(error.code()))
+        {
+            open_files.close_file(tor.id(), file_index);
+            tr_logAddWarnTor(&tor, fmt::format("Stale network handle for file {}, evicting from cache to retry", file_index));
+        }
+
         tr_logAddErrorTor(
             &tor,
             fmt::format(
@@ -186,6 +219,12 @@ void write_bytes(
 
     if (error)
     {
+        if (is_stale_network_error(error.code()))
+        {
+            open_files.close_file(tor.id(), file_index);
+            tr_logAddWarnTor(&tor, fmt::format("Stale network handle for file {}, evicting from cache to retry", file_index));
+        }
+
         tr_logAddErrorTor(
             &tor,
             fmt::format(
