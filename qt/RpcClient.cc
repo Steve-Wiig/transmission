@@ -141,7 +141,10 @@ void RpcClient::sendNetworkRequest(QByteArray const& body, QFutureInterface<RpcR
     auto req = QNetworkRequest{};
     req.setUrl(url_);
     req.setRawHeader("Content-Type", "application/json; charset=UTF-8");
-    req.setRawHeader("User-Agent", "Transmission/" SHORT_VERSION_STRING);
+    req.setRawHeader("User-Agent", "Transmission/" SHORT_VERSION_STRING);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
+    req.setTransferTimeout(15000); // 15s timeout for Slow LAN resilience
+#endif
     if (!session_id_.isEmpty())
     {
         req.setRawHeader(SessionIdHeaderName, session_id_);

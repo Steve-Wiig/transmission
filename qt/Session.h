@@ -11,6 +11,7 @@
 #include <optional>
 #include <string_view>
 #include <vector>
+#include <atomic>
 
 #include <QObject>
 #include <QString>
@@ -197,6 +198,7 @@ private:
     QString session_id_;
     bool is_definitely_local_session_ = true;
     RpcClient& rpc_;
+    std::atomic<uint64_t> refresh_sequence_{0};
 
     static inline torrent_ids_t const RecentlyActiveIDs = { -1 };
 

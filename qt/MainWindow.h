@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <ctime>
+#include <atomic>
 #include <memory>
 
 #include <QMainWindow>
@@ -165,8 +166,8 @@ private:
     TorrentFilter filter_model_;
     TorrentDelegate* torrent_delegate_ = {};
     TorrentDelegateMin* torrent_delegate_min_ = {};
-    time_t last_send_time_ = {};
-    time_t last_read_time_ = {};
+    std::atomic<time_t> last_send_time_ = {};
+    std::atomic<time_t> last_read_time_ = {};
     QTimer network_timer_;
     bool network_error_ = {};
     QAction* dlimit_off_action_ = {};

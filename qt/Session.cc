@@ -723,6 +723,7 @@ using TorrentProperties = Session::TorrentProperties;
 
 void Session::refreshTorrents(torrent_ids_t const& torrent_ids, TorrentProperties const props)
 {
+    auto const seq = ++refresh_sequence_;
     auto fields = tr_variant::Vector{};
     auto const keys = getKeys(props);
     fields.reserve(std::size(keys));
@@ -741,8 +742,10 @@ void Session::refreshTorrents(torrent_ids_t const& torrent_ids, TorrentPropertie
     bool const all_torrents = std::empty(torrent_ids);
 
     q->add(
-        [this, all_torrents](RpcResponse const& r)
+        [this, all_torrents, seq](RpcResponse const& r)
         {
+            // Discard stale incremental responses to prevent out-of-order GUI updates
+            if (!all_torrents && seq < refresh_sequence_.load(std::memory_order_relaxed)) { return; }
             tr_variant* torrents = nullptr;
 
             if (tr_variantDictFindList(r.args.get(), TR_KEY_torrents, &torrents))
