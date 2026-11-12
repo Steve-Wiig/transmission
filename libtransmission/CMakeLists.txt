@@ -2,6 +2,11 @@ include(CheckAtomic)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
 
+# Globally force winsock2.h before windows.h on MinGW
+if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-include winsock2.h)
+endif()
+
 if(ENABLE_NLS)
     find_package(Intl)
 endif()

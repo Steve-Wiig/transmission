@@ -3,6 +3,11 @@ set_property(GLOBAL PROPERTY AUTOGEN_SOURCE_GROUP "Generated Files")
 # https://doc.qt.io/qt-6/macos.html#supported-versions
 set(CMAKE_OSX_DEPLOYMENT_TARGET 11)
 
+# Globally force winsock2.h before windows.h on MinGW
+if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-include winsock2.h)
+endif()
+
 add_library(${TR_NAME}-qt-lib STATIC)
 
 target_sources(${TR_NAME}-qt-lib
