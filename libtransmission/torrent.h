@@ -1057,6 +1057,19 @@ private:
     friend void tr_torrentSetPriority(tr_torrent* tor, tr_priority_t priority);
     friend void tr_torrentStart(tr_torrent* tor);
     friend void tr_torrentStartNow(tr_torrent* tor);
+
+public:
+    // --- Circuit Breaker ---
+    void record_transient_failure();
+    void record_transient_success();
+    void clear_circuit_breaker();
+    [[nodiscard]] bool is_paused_by_circuit_breaker() const noexcept { return paused_by_circuit_breaker_; }
+
+private:
+    uint32_t transient_failure_count_ = 0;
+    time_t transient_failure_window_start_ = 0;
+    bool paused_by_circuit_breaker_ = false;
+
     friend void tr_torrentStop(tr_torrent* tor);
     friend void tr_torrentUseSessionLimits(tr_torrent* tor, bool enabled);
     friend void tr_torrentVerify(tr_torrent* tor);

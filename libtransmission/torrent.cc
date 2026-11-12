@@ -2745,3 +2745,45 @@ std::vector<time_t> const& tr_torrent::ResumeHelper::file_mtimes() const noexcep
 {
     return tor_.file_mtimes_;
 }
+
+
+// --- Circuit Breaker Implementation ---
+void tr_torrent::record_transient_failure()
+{
+    auto const now = tr_time();
+    if (now - transient_failure_window_start_ > 60)
+    {
+        transient_failure_window_start_ = now;
+        transient_failure_count_ = 1;
+    }
+    else
+    {
+        ++transient_failure_count_;
+    }
+
+    static constexpr uint32_t kFailureThreshold = 10;
+    if (transient_failure_count_ >= kFailureThreshold && !paused_by_circuit_breaker_)
+    {
+        tr_logAddWarnTor(this, fmt::format("Circuit breaker tripped: {} transient write failures in 60s, pausing torrent", transient_failure_count_));
+        paused_by_circuit_breaker_ = true;
+
+        stop_soon();
+    }
+}
+
+void tr_torrent::record_transient_success()
+{
+    if (transient_failure_count_ > 0)
+    {
+        transient_failure_count_ = 0;
+        transient_failure_window_start_ = 0;
+    }
+}
+
+void tr_torrent::clear_circuit_breaker()
+{
+    paused_by_circuit_breaker_ = false;
+    transient_failure_count_ = 0;
+    transient_failure_window_start_ = 0;
+}
+

@@ -242,11 +242,12 @@ private:
         }
 
         auto error = tr_error{};
+        auto const [file_index, file_offset] = tor.file_offset(loc);
         tr_sys_file_write_at(
-            get_fd_for_write(tor, error),
+            get_fd_for_write(tor, error, file_index),
             std::data(buf),
             std::size(buf),
-            loc.byte,
+            file_offset,
             nullptr,
             &error);
 
@@ -288,10 +289,10 @@ private:
         }
     }
 
-    tr_sys_file_t get_fd_for_write(tr_torrent& tor, tr_error& error)
+    tr_sys_file_t get_fd_for_write(tr_torrent& tor, tr_error& error, tr_file_index_t file_index)
     {
         // Get or open the file for writing
-        auto const fd = open_files_.get(tor.id(), 0, true);
+        auto const fd = open_files_.get(tor.id(), file_index, true);
         if (!fd || error)
         {
             error.set_from_errno(EIO);
