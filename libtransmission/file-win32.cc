@@ -1019,3 +1019,8 @@ bool tr_sys_dir_close(tr_sys_dir_t handle, tr_error* error)
 
     return ret;
 }
+
+bool tr_sys_dir_create(std::string_view path, int flags, [[maybe_unused]] int permissions, tr_error* error)
+{
+    return create_dir(path, flags, permissions, true, error);
+}

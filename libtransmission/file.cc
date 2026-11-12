@@ -168,6 +168,7 @@ bool tr_sys_path_is_same(std::string_view path1, std::string_view path2, tr_erro
     return same;
 }
 
+#ifndef _WIN32
 bool tr_sys_dir_create(std::string_view path, int flags, [[maybe_unused]] int permissions, tr_error* error)
 {
     auto const filesystem_path = tr_u8path(path);
@@ -265,6 +266,8 @@ bool tr_sys_dir_create(std::string_view path, int flags, [[maybe_unused]] int pe
 
     return true;
 }
+#endif
+
 
 std::vector<std::string> tr_sys_dir_get_files(
     std::string_view folder,
