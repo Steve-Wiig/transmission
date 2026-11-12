@@ -154,6 +154,8 @@ public:
 
     virtual void scrape(tr_scrape_request const& request, tr_scrape_response_func on_response) = 0;
 
+    virtual void startShutdown() = 0;
+
     virtual void upkeep() = 0;
 
     // @brief process an incoming udp message if it's a tracker response.

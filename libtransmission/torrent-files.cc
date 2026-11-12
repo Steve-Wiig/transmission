@@ -231,6 +231,16 @@ bool tr_torrent_files::move(
         if (!tr_file_move(old_path, path, true, error))
         {
             err = true;
+            // Rollback: move already-moved files back to their original locations
+            // to prevent split-state corruption on flaky SMB/NAS shares.
+            for (tr_file_index_t r = 0; r < i; ++r)
+            {
+                auto const r_found = find(r, std::data(paths), std::size(paths));
+                if (!r_found) continue;
+                auto const r_old = r_found->filename();
+                auto const r_new = tr_pathbuf{ parent, '/', r_found->subpath() };
+                tr_file_move(r_new, r_old, false, nullptr);
+            }
             break;
         }
     }

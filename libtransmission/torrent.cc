@@ -1728,20 +1728,26 @@ void tr_torrent::VerifyMediator::on_verify_done(bool const aborted)
                 total_size / (1 + duration_secs)));
     }
 
-    tor_->set_verify_state(VerifyState::None);
+    // Defer all state changes to the session thread to avoid UAF if the torrent
+    // was destroyed while the verify thread was blocked in a slow I/O syscall.
+    auto* const session = tor_->session;
+    auto const tor_id = tor_->id();
 
-    if (!aborted && !tor_->is_deleting_)
-    {
-        tor_->session->run_in_session_thread(
-            // Do not capture the torrent pointer directly, or else we will crash if program
-            // execution reaches this point while the session thread is about to free this torrent.
-            [tor_id = tor_->id(), session = tor_->session]()
+    session->run_in_session_thread(
+        [tor_id, session, aborted]()
+        {
+            auto* const tor = session->torrents().get(tor_id);
+            if (tor == nullptr || tor->is_deleting_)
             {
-                auto* const tor = session->torrents().get(tor_id);
-                if (tor == nullptr || tor->is_deleting_)
-                {
-                    return;
-                }
+                return;
+            }
+
+            tor->set_verify_state(VerifyState::None);
+
+            if (aborted)
+            {
+                return;
+            }
 
                 for (tr_file_index_t file = 0, n_files = tor->file_count(); file < n_files; ++file)
                 {
@@ -1760,7 +1766,6 @@ void tr_torrent::VerifyMediator::on_verify_done(bool const aborted)
                     tor->start(false, !tor->checked_pieces_.has_none());
                 }
             });
-    }
 }
 
 // ---

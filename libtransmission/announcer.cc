@@ -148,6 +148,7 @@ public:
     void startShutdown() override
     {
         is_shutting_down_ = true;
+        announcer_udp_.startShutdown();
         flushCloseMessages();
     }
 

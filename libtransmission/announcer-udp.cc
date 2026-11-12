@@ -639,6 +639,11 @@ private:
     }
 
 public:
+    void shutdown()
+    {
+        fail_all(true, true, "Shutting down");
+    }
+
     [[nodiscard]] constexpr std::string_view log_name() const noexcept
     {
         return authority;
@@ -660,6 +665,7 @@ public:
     std::list<tau_scrape_request> scrapes;
 
 private:
+    bool shutting_down_ = false;
     Mediator& mediator_;
 
     std::array<std::optional<std::future<std::optional<tr_socket_address>>>, NUM_TR_AF_INET_TYPES> addr_pending_dns_;
@@ -798,9 +804,18 @@ public:
         return false;
     }
 
+    void startShutdown() override
+    {
+        shutting_down_ = true;
+        for (auto& tracker : trackers_)
+        {
+            tracker.shutdown();
+        }
+    }
+
     [[nodiscard]] bool is_idle() const noexcept override
     {
-        return std::ranges::all_of(trackers_, [](auto const& tracker) { return tracker.is_idle(); });
+        return shutting_down_ || std::ranges::all_of(trackers_, [](auto const& tracker) { return tracker.is_idle(); });
     }
 
 private:
@@ -864,6 +879,7 @@ private:
 
     std::list<tau_tracker> trackers_;
 
+    bool shutting_down_ = false;
     Mediator& mediator_;
 };
 

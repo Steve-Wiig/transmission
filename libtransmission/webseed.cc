@@ -439,7 +439,7 @@ void tr_webseed_task::on_partial_data_fetched(tr_web::FetchResponse const& web_r
 
     auto* const task = static_cast<tr_webseed_task*>(vtask);
 
-    if (task->dead)
+    if (task->dead || task->webseed_->tor.session->isClosing())
     {
         delete task;
         return;
