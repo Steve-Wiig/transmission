@@ -327,11 +327,16 @@ tr_error_code_t tr_ioWrite(
         }
     }
 
-    // if IO failed, set torrent's error if not already set
+    // if IO failed, set torrent's error if not already set.
+    // Defer the stop: tr_torrentStop() runs stop_now() synchronously on the
+    // session thread, which destroys the peer objects. When tr_ioWrite() is
+    // called from a peer I/O callback (client_got_block), that frees `this`
+    // mid-unwind and the caller then touches freed memory. stop_soon() defers
+    // the stop to do_idle_work() at the next bandwidth pulse boundary.
     if (error && !tor.error().is_local_error())
     {
         tor.error().set_local_error(error.message());
-        tr_torrentStop(&tor);
+        tor.stop_soon();
     }
 
     return error.code();

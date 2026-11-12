@@ -2699,11 +2699,14 @@ void tr_peerMgr::bandwidth_pulse()
     static auto constexpr Msec = std::chrono::duration_cast<std::chrono::milliseconds>(BandwidthTimerPeriod).count();
     session->top_bandwidth_.allocate(Msec);
 
-    // torrent upkeep - only for torrents with active peers
-    // Use a cached list of active torrents to avoid iterating all torrents
+    // torrent upkeep - for all running torrents.
+    // do_idle_work() is the sole processor of needs_completeness_check_ and
+    // is_stopping_. Gating it on peer_count starved peerless torrents
+    // (webseed-only, or all peers dropped): they never transitioned to done
+    // and never honored stop_soon().
     for (auto* const tor : torrents_)
     {
-        if (tor->swarm && tor->swarm->stats.peer_count > 0)
+        if (tor->swarm && tor->is_running())
         {
             tor->do_idle_work();
         }
