@@ -649,6 +649,8 @@ public:
     std::string_view const host_lookup;
     tr_port const port;
 
+    time_t last_used_at_ = tr_time();
+
     std::array<time_t, NUM_TR_AF_INET_TYPES> connecting_at = {};
     std::array<time_t, NUM_TR_AF_INET_TYPES> connection_expiration_time = {};
     std::array<tau_connection_t, NUM_TR_AF_INET_TYPES> connection_id = {};
@@ -687,6 +689,7 @@ public:
             return;
         }
 
+        tracker->last_used_at_ = tr_time();
         auto const data = std::make_shared<tau_announce_data>(std::move(on_response));
         for (ipp_t ipp = 0; ipp < NUM_TR_AF_INET_TYPES; ++ipp)
         {
@@ -703,15 +706,25 @@ public:
             return;
         }
 
+        tracker->last_used_at_ = tr_time();
         tracker->scrapes.emplace_back(request, std::move(on_response));
         tracker->upkeep(false);
     }
 
     void upkeep() override
     {
-        for (auto& tracker : trackers_)
+        auto const now = tr_time();
+        for (auto it = trackers_.begin(); it != trackers_.end(); )
         {
-            tracker.upkeep();
+            it->upkeep();
+            if (it->is_idle() && now - it->last_used_at_ > 3600) // Evict after 1 hour of idleness
+            {
+                it = trackers_.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
         }
     }
 

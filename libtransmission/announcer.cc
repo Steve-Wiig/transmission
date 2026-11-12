@@ -1220,7 +1220,7 @@ void tr_announcer_impl::removeTorrent(tr_torrent* tor)
 
     for (auto const& tier : ta->tiers)
     {
-        if (tier.isRunning && tier.lastAnnounceSucceeded)
+        if (tier.isRunning)
         {
             stops_.emplace(create_announce_request(this, tor, &tier, TR_ANNOUNCE_EVENT_STOPPED));
         }
@@ -1784,6 +1784,7 @@ void tr_announcer_impl::resetTorrent(tr_torrent* tor)
     // copy the tracker counts into the new replacementa
     if (older != nullptr)
     {
+        newer->callback = std::move(older->callback);
         for (auto& new_tier : newer->tiers)
         {
             for (auto& new_tracker : new_tier.trackers)
