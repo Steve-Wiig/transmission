@@ -310,9 +310,13 @@ void TorrentModel::updateTorrents(tr_variant* torrent_list, bool is_complete_lis
             }
         }
         
-        // Find added torrents
+        // Find added torrents (O(1) lookup instead of O(n^2))
+        std::unordered_set<int> old_ids;
+        old_ids.reserve(old.size());
+        for (auto* o : old) old_ids.insert(o->id());
+
         for (auto* t : processed) {
-            if (!std::ranges::any_of(old, [id = t->id()](auto* o) { return o->id() == id; })) {
+            if (!old_ids.contains(t->id())) {
                 added_new.push_back(t);
             }
         }

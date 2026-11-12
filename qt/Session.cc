@@ -89,7 +89,7 @@ void Session::portTest(Session::PortTestIpProtocol const ip_protocol)
         emit portTested(dictFind<bool>(r.args.get(), TR_KEY_port_is_open), ip_protocol);
     };
 
-    auto* q = new RpcQueue{};
+    auto* q = new RpcQueue{this};
 
     q->add([this, &args]() { return exec(TR_KEY_port_test, &args); }, response_func);
 
@@ -112,7 +112,7 @@ void Session::copyMagnetLinkToClipboard(int torrent_id)
     dictAdd(&args, TR_KEY_ids, std::array<int, 1>{ torrent_id });
     dictAdd(&args, TR_KEY_fields, Fields);
 
-    auto* q = new RpcQueue{};
+    auto* q = new RpcQueue{this};
 
     q->add([this, &args]() { return exec(TR_KEY_torrent_get, &args); });
 
@@ -451,7 +451,7 @@ void Session::addOptionalIds(tr_variant* args_dict, torrent_ids_t const& torrent
 
 Session::Tag Session::torrentSetImpl(tr_variant* args)
 {
-    auto* const q = new RpcQueue{};
+    auto* const q = new RpcQueue{this};
     auto const tag = q->tag();
 
     q->add([this, args]() { return rpc_.exec(TR_KEY_torrent_set, args); });
@@ -535,7 +535,7 @@ void Session::torrentRenamePath(torrent_ids_t const& torrent_ids, QString const&
     dictAdd(&args, TR_KEY_path, oldpath);
     dictAdd(&args, TR_KEY_name, newname);
 
-    auto* q = new RpcQueue{};
+    auto* q = new RpcQueue{this};
 
     q->add(
         [this, &args]() { return exec(TR_KEY_torrent_rename_path, &args); },
@@ -733,7 +733,7 @@ void Session::refreshTorrents(torrent_ids_t const& torrent_ids, TorrentPropertie
     map.try_emplace(TR_KEY_fields, std::move(fields));
     addOptionalIds(map, torrent_ids);
 
-    auto* q = new RpcQueue{};
+    auto* q = new RpcQueue{this};
 
     auto args = tr_variant{ std::move(map) };
     q->add([this, &args]() { return exec(TR_KEY_torrent_get, &args); });
@@ -780,7 +780,7 @@ void Session::sendTorrentRequest(tr_quark const method, torrent_ids_t const& tor
     tr_variantInitDict(&args, 1);
     addOptionalIds(&args, torrent_ids);
 
-    auto* q = new RpcQueue{};
+    auto* q = new RpcQueue{this};
 
     q->add([this, method, &args]() { return exec(method, &args); });
 
@@ -844,7 +844,7 @@ void Session::initTorrents(torrent_ids_t const& ids)
 
 void Session::refreshSessionStats()
 {
-    auto* q = new RpcQueue{};
+    auto* q = new RpcQueue{this};
 
     q->add([this]() { return exec(TR_KEY_session_stats, nullptr); });
 
@@ -855,7 +855,7 @@ void Session::refreshSessionStats()
 
 void Session::refreshSessionInfo()
 {
-    auto* q = new RpcQueue{};
+    auto* q = new RpcQueue{this};
 
     q->add([this]() { return exec(TR_KEY_session_get, nullptr); });
 
@@ -866,7 +866,7 @@ void Session::refreshSessionInfo()
 
 void Session::updateBlocklist()
 {
-    auto* q = new RpcQueue{};
+    auto* q = new RpcQueue{this};
 
     q->add([this]() { return exec(TR_KEY_blocklist_update, nullptr); });
 
@@ -1012,7 +1012,7 @@ void Session::addTorrent(AddData const& add_me, tr_variant* args_dict)
         break;
     }
 
-    auto* q = new RpcQueue{};
+    auto* q = new RpcQueue{this};
 
     q->add(
         [this, args_dict]() { return exec(TR_KEY_torrent_add, args_dict); },
