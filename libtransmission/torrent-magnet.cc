@@ -138,8 +138,13 @@ bool tr_torrent::use_metainfo_from_file(tr_torrent_metainfo const* metainfo, cha
         return false;
     }
 
-    // remove .magnet file
-    tr_sys_path_remove(magnet_file());
+    // remove .magnet file (best-effort; .torrent already saved)
+    if (auto remove_err = tr_error{}; !tr_sys_path_remove(magnet_file(), &remove_err))
+    {
+        tr_logAddWarnTor(this, fmt::format(
+            "Couldn't remove magnet file '{}': {} ({})",
+            magnet_file(), remove_err.message(), remove_err.code()));
+    }
 
     // tor should keep this metainfo
     set_metainfo(*metainfo);
@@ -214,6 +219,10 @@ tr_variant build_metainfo_except_info_dict(tr_torrent_metainfo const& tm)
     // test the info_dict checksum
     if (tr_sha1::digest(m->get_metadata()) != info_hash())
     {
+        if (error != nullptr)
+        {
+            error->set(EINVAL, "info_dict checksum does not match info_hash");
+        }
         return false;
     }
 
@@ -238,7 +247,7 @@ tr_variant build_metainfo_except_info_dict(tr_torrent_metainfo const& tm)
 
     // does this synthetic torrent file parse?
     auto metainfo = tr_torrent_metainfo{};
-    if (!metainfo.parse_benc(benc))
+    if (!metainfo.parse_benc(benc, error))
     {
         return false;
     }
@@ -249,8 +258,13 @@ tr_variant build_metainfo_except_info_dict(tr_torrent_metainfo const& tm)
         return false;
     }
 
-    // remove .magnet file
-    tr_sys_path_remove(magnet_file());
+    // remove .magnet file (best-effort; .torrent already saved)
+    if (auto remove_err = tr_error{}; !tr_sys_path_remove(magnet_file(), &remove_err))
+    {
+        tr_logAddWarnTor(this, fmt::format(
+            "Couldn't remove magnet file '{}': {} ({})",
+            magnet_file(), remove_err.message(), remove_err.code()));
+    }
 
     // tor should keep this metainfo
     set_metainfo(metainfo);
