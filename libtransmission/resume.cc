@@ -68,9 +68,11 @@ size_t add_peers(tr_torrent* tor, tr_variant::Vector const& l)
     {
         if (auto p = tr::serializer::to_value<tr_pex>(l[i]))
         {
-            // Skip invalid peers from corrupted resume files to prevent
-            // crashes in peer connection logic (port=0, malformed addresses).
-            if (p->socket_address.port().host() == 0U)
+            // Skip unusable peers from corrupted resume files.
+            // is_valid_for_peers() rejects bad address family, port 0,
+            // multicast, unspecified and IPv4-mapped addresses, and
+            // explicitly permits loopback for TR_PEER_FROM_RESUME.
+            if (!p->socket_address.is_valid_for_peers(TR_PEER_FROM_RESUME))
             {
                 continue;
             }

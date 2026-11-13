@@ -10,6 +10,7 @@
 #include <map>
 #include <optional>
 #include <string_view>
+#include <thread>
 #include <vector>
 #include <atomic>
 
@@ -190,6 +191,7 @@ private:
     int64_t blocklist_size_ = -1;
     std::array<bool, NUM_PORT_TEST_IP_PROTOCOL> port_test_pending_ = {};
     tr_session* session_ = {};
+    std::thread shutdown_thread_;
     bool portable_ = false;
     QStringList idle_json_;
     tr_session_stats stats_ = EmptyStats;

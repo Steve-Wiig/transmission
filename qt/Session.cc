@@ -251,6 +251,14 @@ void Session::stop()
 {
     rpc_.stop();
 
+    // Wait for any in-flight async close before we go away.
+    // tr_sessionClose() deletes the session and joins the libevent thread;
+    // letting that outlive us races process teardown.
+    if (shutdown_thread_.joinable())
+    {
+        shutdown_thread_.join();
+    }
+
     if (session_ != nullptr)
     {
         tr_sessionClose(session_, 5.0);
@@ -270,7 +278,7 @@ void Session::stopAsync()
         return;
     }
 
-    std::thread([s, guard = QPointer<Session>{this}] {
+    shutdown_thread_ = std::thread([s, guard = QPointer<Session>{this}] {
         tr_sessionClose(s, 15.0);
         QMetaObject::invokeMethod(
             qApp,
@@ -281,7 +289,7 @@ void Session::stopAsync()
                 }
             },
             Qt::QueuedConnection);
-    }).detach();
+    });
 }
 
 void Session::restart()
