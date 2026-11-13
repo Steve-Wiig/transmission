@@ -147,11 +147,19 @@ void AddData::disposeSourceFile() const
     {
     case FilenameDisposal::Delete:
         file.setPermissions(QFile::ReadOwner | QFile::WriteOwner);
-        file.remove();
+        if (!file.remove())
+        {
+            qWarning("Couldn't remove source file '%s': %s",
+                qPrintable(filename), qPrintable(file.errorString()));
+        }
         break;
 
     case FilenameDisposal::Rename:
-        file.rename(QStringLiteral("%1.added").arg(filename));
+        if (!file.rename(QStringLiteral("%1.added").arg(filename)))
+        {
+            qWarning("Couldn't rename source file '%s': %s",
+                qPrintable(filename), qPrintable(file.errorString()));
+        }
         break;
 
     default:
