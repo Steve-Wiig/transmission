@@ -371,6 +371,7 @@ void Blocklists::Blocklist::ensureLoaded() const
     }
     if (!file_info)
     {
+        rules_.reset(); // allow retry on transient stat failure
         return;
     }
 
@@ -384,6 +385,7 @@ void Blocklists::Blocklist::ensureLoaded() const
                 fmt::arg("path", bin_file_),
                 fmt::arg("error", tr_strerror(errno)),
                 fmt::arg("error_code", errno)));
+        rules_.reset(); // allow retry on transient open failure
         return;
     }
 
