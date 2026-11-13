@@ -1894,6 +1894,7 @@ tr_error_code_t tr_peerMsgsImpl::client_got_block(std::span<uint8_t const> block
     // If this happens, `this` will be destructed and must no longer be used.
     if (auto const err = tr_ioWrite(tor_, session->openFiles(), tor_.block_loc(block), block_data); err != 0)
     {
+        active_requests.unset(block); // Fix: allow immediate re-request on transient failure
         return err;
     }
 

@@ -333,10 +333,22 @@ tr_error_code_t tr_ioWrite(
     // called from a peer I/O callback (client_got_block), that frees `this`
     // mid-unwind and the caller then touches freed memory. stop_soon() defers
     // the stop to do_idle_work() at the next bandwidth pulse boundary.
-    if (error && !tor.error().is_local_error())
+    if (error)
     {
-        tor.error().set_local_error(error.message());
-        tor.stop_soon();
+        bool const transient = is_stale_network_error(error.code());
+        if (transient)
+        {
+            tor.record_transient_failure();
+        }
+        else if (!tor.error().is_local_error())
+        {
+            tor.error().set_local_error(error.message());
+            tor.stop_soon();
+        }
+    }
+    else
+    {
+        tor.record_transient_success();
     }
 
     return error.code();
