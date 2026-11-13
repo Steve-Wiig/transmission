@@ -68,6 +68,12 @@ size_t add_peers(tr_torrent* tor, tr_variant::Vector const& l)
     {
         if (auto p = tr::serializer::to_value<tr_pex>(l[i]))
         {
+            // Skip invalid peers from corrupted resume files to prevent
+            // crashes in peer connection logic (port=0, malformed addresses).
+            if (p->socket_address.port().host() == 0U)
+            {
+                continue;
+            }
             pex.emplace_back(std::move(*p));
         }
     }

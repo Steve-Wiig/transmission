@@ -64,7 +64,10 @@ size_t get_desired_output_buffer_size(tr_peerIo const* io, uint64_t now)
     static auto constexpr Floor = static_cast<uint64_t>(tr_block_info::BlockSize * 3.5);
 
     auto const current_speed = io->get_piece_speed(now, tr_direction::Up);
-    return std::max(Floor, current_speed.base_quantity() * PeriodSecs);
+    // Cap at 4 MiB to prevent unbounded buffer growth on fast LAN links.
+    // At 1 Gbps, uncapped this computes ~1.8 GB per peer.
+    static auto constexpr MaxBuffer = uint64_t{ 4U * 1024U * 1024U };
+    return std::min(MaxBuffer, std::max(Floor, current_speed.base_quantity() * PeriodSecs));
 }
 } // namespace
 

@@ -79,8 +79,11 @@ struct tr_bandwidth
 private:
     using Speed = tr::Values::Speed;
 
-    static constexpr auto HistoryMSec = 2000U;
-    static constexpr auto GranularityMSec = 250U;
+    // 10s window with 500ms granularity (20 samples) for smoother
+    // speed estimates on bursty NAS/SMB I/O. Previous 2s/250ms (8 samples)
+    // caused sawtooth throughput oscillation under speed limits.
+    static constexpr auto HistoryMSec = 10000U;
+    static constexpr auto GranularityMSec = 500U;
     static constexpr auto HistorySize = HistoryMSec / GranularityMSec;
 
 public:
