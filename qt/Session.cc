@@ -200,59 +200,16 @@ void Session::updatePref(tr_quark key)
             break;
 
         case TR_KEY_rpc_authentication_required:
-            if (session_ != nullptr)
-            {
-                tr_sessionSetRPCPasswordEnabled(session_, prefs_.get<bool>(key));
-            }
-
-            break;
-
         case TR_KEY_rpc_enabled:
-            if (session_ != nullptr)
-            {
-                tr_sessionSetRPCEnabled(session_, prefs_.get<bool>(key));
-            }
-
-            break;
-
         case TR_KEY_rpc_password:
-            if (session_ != nullptr)
-            {
-                tr_sessionSetRPCPassword(session_, prefs_.get<QString>(key).toStdString());
-            }
-
-            break;
-
         case TR_KEY_rpc_port:
-            if (session_ != nullptr)
-            {
-                tr_sessionSetRPCPort(session_, static_cast<uint16_t>(prefs_.get<int>(key)));
-            }
-
-            break;
-
         case TR_KEY_rpc_username:
-            if (session_ != nullptr)
-            {
-                tr_sessionSetRPCUsername(session_, prefs_.get<QString>(key).toStdString());
-            }
-
-            break;
-
         case TR_KEY_rpc_whitelist_enabled:
-            if (session_ != nullptr)
-            {
-                tr_sessionSetRPCWhitelistEnabled(session_, prefs_.get<bool>(key));
-            }
-
-            break;
-
         case TR_KEY_rpc_whitelist:
-            if (session_ != nullptr)
             {
-                tr_sessionSetRPCWhitelist(session_, prefs_.get<QString>(key).toStdString());
+                auto [pref_key, pref_val] = prefs_.keyval(key);
+                sessionSet(pref_key, std::move(pref_val));
             }
-
             break;
 
         default:
@@ -940,17 +897,8 @@ void Session::updateInfo(tr_variant* args_dict)
         }
     }
 
-    /* Use the C API to get settings that, for security reasons, aren't supported by RPC */
-    if (session_ != nullptr)
-    {
-        prefs_.set(TR_KEY_rpc_enabled, tr_sessionIsRPCEnabled(session_));
-        prefs_.set(TR_KEY_rpc_authentication_required, tr_sessionIsRPCPasswordEnabled(session_));
-        prefs_.set(TR_KEY_rpc_password, QString::fromStdString(tr_sessionGetRPCPassword(session_)));
-        prefs_.set(TR_KEY_rpc_port, tr_sessionGetRPCPort(session_));
-        prefs_.set(TR_KEY_rpc_username, QString::fromStdString(tr_sessionGetRPCUsername(session_)));
-        prefs_.set(TR_KEY_rpc_whitelist_enabled, tr_sessionGetRPCWhitelistEnabled(session_));
-        prefs_.set(TR_KEY_rpc_whitelist, QString::fromStdString(tr_sessionGetRPCWhitelist(session_)));
-    }
+    // RPC settings are now fetched asynchronously via session_get RPC
+    // in refreshSessionInfo(). No direct C-API calls needed here.
 
     if (auto const size = dictFind<int>(args_dict, TR_KEY_blocklist_size); size && *size != blocklistSize())
     {
