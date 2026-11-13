@@ -310,6 +310,7 @@ target_link_libraries(${TR_NAME}
         $<$<BOOL:${WIN32}>:crypt32>
         $<$<BOOL:${WIN32}>:shlwapi>
         $<$<BOOL:${WIN32}>:rstrtmgr>
+        $<$<BOOL:${WIN32}>:mpr>
         "$<$<BOOL:${APPLE}>:-framework Foundation>"
         $<$<BOOL:${ANDROID}>:${log-lib}>
         $<$<BOOL:${HAVE_LIBATOMIC}>:atomic>
