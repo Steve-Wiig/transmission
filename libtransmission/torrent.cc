@@ -1566,6 +1566,10 @@ void tr_torrentStart(tr_torrent* tor)
 {
     tr_return_if_fail(tr_isTorrent(tor));
 
+    // An explicit user start means the storage is believed to be available
+    // again; re-arm the transient-failure circuit breaker so it can trip
+    // (and log) again on a subsequent outage.
+    tor->clear_circuit_breaker();
     tor->start_when_stable_ = true;
     tor->start(false /*bypass_queue*/, {});
 }
@@ -1574,6 +1578,8 @@ void tr_torrentStartNow(tr_torrent* tor)
 {
     tr_return_if_fail(tr_isTorrent(tor));
 
+    // See tr_torrentStart: explicit user action re-arms the circuit breaker.
+    tor->clear_circuit_breaker();
     tor->start_when_stable_ = true;
     tor->start(true /*bypass_queue*/, {});
 }
