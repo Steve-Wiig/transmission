@@ -326,16 +326,6 @@ int tr_main(int argc, char** argv)
         std::string portable_settings = portable_config + "/settings.json";
         bool portable_exists = std::filesystem::exists(portable_settings);
 
-        // Debug: write portable check results
-        {
-            std::ofstream dbg(portable_root + "/portable_check.txt");
-            dbg << "portable_config: " << portable_config << "\n";
-            dbg << "portable_settings: " << portable_settings << "\n";
-            dbg << "portable_exists: " << portable_exists << "\n";
-            dbg << "portable_reimport: " << portable_reimport << "\n";
-            dbg << "data dir exists: " << std::filesystem::exists(portable_config) << "\n";
-        }
-
         if (portable_exists && !portable_reimport)
         {
             tr_logAddInfo("[PortableMode] Using existing portable config");
