@@ -2964,10 +2964,14 @@ void tr_rpc_request_exec_impl(tr_session* session, tr_variant& request, tr_rpc_r
 void tr_rpc_request_exec_batch(tr_session* session, tr_variant::Vector& requests, tr_rpc_response_func&& callback)
 {
     auto const n_requests = std::size(requests);
-    // Use stack allocation for small batches to avoid heap allocation
+    // Small batches use a fixed-size array instead of a sized vector
     if (n_requests <= 16) {
-        std::array<tr_variant, 16> responses_arr;
-        size_t n_responses = 0;
+        // All shared state must be heap-owned: async handlers (torrent-add with
+        // a URL, port-test, blocklist-update, torrent-rename-path) store this
+        // lambda in a heap tr_rpc_idle_data and invoke it after this function
+        // has returned. Capturing frame locals by reference would dangle.
+        auto const responses_arr = std::make_shared<std::array<tr_variant, 16>>();
+        auto const n_responses = std::make_shared<size_t>(0U);
 
         // Share one callback across all per-request lambdas. Moving `callback`
         // inside the loop would empty it after the first iteration, leaving
@@ -2980,16 +2984,16 @@ void tr_rpc_request_exec_batch(tr_session* session, tr_variant::Vector& requests
             tr_rpc_request_exec_impl(
                 session,
                 requests[i],
-                [&responses_arr, &n_responses, n_requests, i, cb](tr_variant&& response)
+                [responses_arr, n_responses, n_requests, i, cb](tr_variant&& response)
                 {
-                    responses_arr[i] = std::move(response);
-                    if (++n_responses >= n_requests)
+                    (*responses_arr)[i] = std::move(response);
+                    if (++(*n_responses) >= n_requests)
                     {
                         tr_variant::Vector responses_vec;
                         responses_vec.reserve(n_requests);
                         for (size_t j = 0; j < n_requests; ++j) {
-                            if (responses_arr[j].has_value()) {
-                                responses_vec.emplace_back(std::move(responses_arr[j]));
+                            if ((*responses_arr)[j].has_value()) {
+                                responses_vec.emplace_back(std::move((*responses_arr)[j]));
                             }
                         }
                         (*cb)(!std::empty(responses_vec) ? std::move(responses_vec) : tr_variant{});
