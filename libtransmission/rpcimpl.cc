@@ -2968,13 +2968,19 @@ void tr_rpc_request_exec_batch(tr_session* session, tr_variant::Vector& requests
     if (n_requests <= 16) {
         std::array<tr_variant, 16> responses_arr;
         size_t n_responses = 0;
-        
+
+        // Share one callback across all per-request lambdas. Moving `callback`
+        // inside the loop would empty it after the first iteration, leaving
+        // every other lambda with an empty std::function; whichever request
+        // completed last would then invoke it and throw std::bad_function_call.
+        auto const cb = std::make_shared<tr_rpc_response_func>(std::move(callback));
+
         for (size_t i = 0U; i < n_requests; ++i)
         {
             tr_rpc_request_exec_impl(
                 session,
                 requests[i],
-                [&responses_arr, &n_responses, n_requests, i, cb = std::move(callback)](tr_variant&& response)
+                [&responses_arr, &n_responses, n_requests, i, cb](tr_variant&& response)
                 {
                     responses_arr[i] = std::move(response);
                     if (++n_responses >= n_requests)
@@ -2986,7 +2992,7 @@ void tr_rpc_request_exec_batch(tr_session* session, tr_variant::Vector& requests
                                 responses_vec.emplace_back(std::move(responses_arr[j]));
                             }
                         }
-                        cb(!std::empty(responses_vec) ? std::move(responses_vec) : tr_variant{});
+                        (*cb)(!std::empty(responses_vec) ? std::move(responses_vec) : tr_variant{});
                     }
                 },
                 true);
