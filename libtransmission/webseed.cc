@@ -248,8 +248,15 @@ public:
     {
         idle_timer_->stop();
 
-        // flag all the pending tasks as dead
-        std::ranges::for_each(tasks, [](auto* task) { task->dead = true; });
+        // Delete pending tasks: callbacks may never fire after stop() (e.g. during
+        // session shutdown), so we must free them here rather than relying on the
+        // fetch done callback. Setting dead=true first ensures any callback that
+        // does fire will see the flag and skip processing.
+        for (auto* task : tasks)
+        {
+            task->dead = true;
+            delete task;
+        }
         tasks.clear();
     }
 
