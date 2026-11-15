@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstdio>
 #include <memory>
 #include <ranges>
 #include <utility>
@@ -123,6 +124,17 @@ MainWindow::MainWindow(Session& session, Prefs& prefs, TorrentModel& model, bool
     connect(ui_.action_AddURL, &QAction::triggered, this, &MainWindow::openURL);
     connect(ui_.action_New, &QAction::triggered, this, &MainWindow::newTorrent);
     connect(ui_.action_Preferences, &QAction::triggered, this, &MainWindow::openPreferences);
+    {
+        FILE* const dbg = fopen("D:/transmission-main/prefs-debug.txt", "w");
+        if (dbg) {
+            fprintf(dbg, "action_Preferences=%p enabled=%d visible=%d text=%s\n",
+                static_cast<void*>(ui_.action_Preferences),
+                ui_.action_Preferences ? ui_.action_Preferences->isEnabled() : -1,
+                ui_.action_Preferences ? ui_.action_Preferences->isVisible() : -1,
+                ui_.action_Preferences ? ui_.action_Preferences->text().toUtf8().constData() : "NULL");
+            fclose(dbg);
+        }
+    }
     connect(ui_.action_Statistics, &QAction::triggered, this, &MainWindow::openStats);
     connect(ui_.action_Donate, &QAction::triggered, this, &MainWindow::openDonate);
     connect(ui_.action_About, &QAction::triggered, this, &MainWindow::openAbout);

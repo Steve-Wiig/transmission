@@ -493,8 +493,16 @@ void Application::raise() const
 
 void Application::showPreferences() const
 {
+    if (!session_ || !window_)
+    {
+        return;
+    }
+
     auto* dialog = new PrefsDialog{ *session_, prefs_, window_.get() };
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
+    dialog->raise();
+    dialog->activateWindow();
 }
 
 bool Application::notifyApp(QString const& title, QString const& body, QStringList const& actions) const
